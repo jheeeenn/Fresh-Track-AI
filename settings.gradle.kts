@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "FreshGroup"
+rootProject.name = "FreshTrack AI"
 include(":app")
  
