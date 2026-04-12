@@ -430,7 +430,8 @@ internal fun RecipeViewAllScreen(
                             onValueChange = { onPreferencesChange(preferences.copy(avoidanceCustomText = it)) },
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text("Custom avoidances") },
-                            placeholder = { Text("e.g. mushrooms, shellfish") }
+                            placeholder = { Text("e.g. mushrooms, shellfish") },
+                            colors = freshOutlinedTextFieldColors()
                         )
 
                         Button(

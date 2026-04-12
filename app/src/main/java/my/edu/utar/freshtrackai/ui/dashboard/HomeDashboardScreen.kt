@@ -226,6 +226,7 @@ internal fun ExpiringSoonAllScreen(
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("Search expiring items") },
                     leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+                    colors = freshOutlinedTextFieldColors(),
                     shape = RoundedCornerShape(12.dp)
                 )
             }

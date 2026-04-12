@@ -1,6 +1,7 @@
 ﻿package my.edu.utar.freshtrackai.ui.dashboard
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -265,6 +266,26 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                 onTabSelected = toRootTab
             )
         }
+    }
+
+    val handleDeviceBack: (() -> Unit)? = when (screen) {
+        WiseScreen.ExpiringSoonAll -> ({ screen = WiseScreen.MainDashboard })
+        WiseScreen.ItemReview -> ({ screen = WiseScreen.SmartScan })
+        WiseScreen.AddMissingItem -> ({
+            screen = if (addItemOrigin == AddItemOrigin.ItemReview) {
+                WiseScreen.ItemReview
+            } else {
+                WiseScreen.MainDashboard
+            }
+        })
+        WiseScreen.RecipeViewAll -> ({ screen = WiseScreen.AiRecipes })
+        WiseScreen.RecipeDetails -> ({ screen = recipeBackTarget })
+        WiseScreen.SmartScan, WiseScreen.AiRecipes, WiseScreen.ShoppingList -> ({ screen = WiseScreen.MainDashboard })
+        WiseScreen.MainDashboard, WiseScreen.AppLauncher -> null
+    }
+
+    BackHandler(enabled = handleDeviceBack != null) {
+        handleDeviceBack?.invoke()
     }
 }
 

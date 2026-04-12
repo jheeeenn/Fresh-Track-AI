@@ -85,6 +85,7 @@ internal fun ShoppingListScreen(
                         onValueChange = { quickAddText = it },
                         modifier = Modifier.weight(1f),
                         placeholder = { Text("Add Item to list...") },
+                        colors = freshOutlinedTextFieldColors(),
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp)
                     )

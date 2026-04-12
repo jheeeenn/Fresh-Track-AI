@@ -30,6 +30,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -51,6 +52,27 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
+
+@Composable
+internal fun freshOutlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedTextColor = Slate900,
+    unfocusedTextColor = Slate900,
+    disabledTextColor = Slate600,
+    focusedContainerColor = White,
+    unfocusedContainerColor = White,
+    disabledContainerColor = Gray50,
+    focusedBorderColor = Emerald,
+    unfocusedBorderColor = Gray200,
+    disabledBorderColor = Gray200,
+    cursorColor = Emerald,
+    focusedLabelColor = Slate600,
+    unfocusedLabelColor = Slate600,
+    focusedPlaceholderColor = Slate600.copy(alpha = 0.7f),
+    unfocusedPlaceholderColor = Slate600.copy(alpha = 0.7f),
+    focusedLeadingIconColor = Slate600,
+    unfocusedLeadingIconColor = Slate600,
+    disabledLeadingIconColor = Slate600.copy(alpha = 0.6f)
+)
 
 @Composable
 internal fun Badge(label: String, textColor: Color, bg: Color) {

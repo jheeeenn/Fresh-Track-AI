@@ -59,6 +59,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -91,7 +92,7 @@ internal fun AddMissingItemScreen(
                 ) {
                     Icon(Icons.Outlined.AddCircle, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(if (isEditMode) "Save Changes" else "Add Item", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text(if (isEditMode) "Save Changes" else "Add Item", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
                 BottomNav(RootTab.Scan, onTabSelected)
             }
@@ -110,11 +111,13 @@ internal fun AddMissingItemScreen(
                         Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = Slate900)
                     }
                     Column(modifier = Modifier.padding(top = 8.dp)) {
-                        Text("Add Missing Item", color = Slate900, fontWeight = FontWeight.ExtraBold, fontSize = 30.sp, lineHeight = 32.sp)
+                        Text("Add Missing Item", color = Slate900, fontWeight = FontWeight.Bold, fontSize = 28.sp, lineHeight = 30.sp)
                         Spacer(Modifier.height(6.dp))
                         Text(
                             "Manually catalog items that weren't captured during your last scan.",
-                            color = Slate600
+                            color = Slate600,
+                            fontSize = 16.sp,
+                            lineHeight = 22.sp
                         )
                     }
                 }
@@ -138,6 +141,7 @@ internal fun AddMissingItemScreen(
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text("Item Name") },
                             placeholder = { Text("e.g. Organic Baby Spinach") },
+                            colors = freshOutlinedTextFieldColors(),
                             singleLine = true
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
@@ -147,6 +151,7 @@ internal fun AddMissingItemScreen(
                                 modifier = Modifier.weight(1f),
                                 label = { Text("Quantity") },
                                 placeholder = { Text("e.g. 1 box") },
+                                colors = freshOutlinedTextFieldColors(),
                                 singleLine = true
                             )
 
@@ -191,6 +196,7 @@ internal fun AddMissingItemScreen(
                             label = { Text("Expiry Date") },
                             placeholder = { Text("e.g. Oct 24, 2026") },
                             leadingIcon = { Icon(Icons.Outlined.DateRange, contentDescription = null, tint = Slate600) },
+                            colors = freshOutlinedTextFieldColors(),
                             singleLine = true
                         )
                     }
@@ -218,6 +224,7 @@ internal fun AddMissingItemScreen(
                             onValueChange = { onDraftChange(draft.copy(nutritionNotes = it)) },
                             modifier = Modifier.fillMaxWidth(),
                             placeholder = { Text("e.g. 23 kcal / 100g, high fiber, low sodium") },
+                            colors = freshOutlinedTextFieldColors(),
                             minLines = 4
                         )
                         OutlinedButton(
@@ -267,7 +274,7 @@ internal fun ItemReviewScreen(
                 ) {
                     Icon(Icons.Outlined.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Save to Inventory", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("Save to Inventory", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
                 BottomNav(RootTab.Scan, onTabSelected)
             }
@@ -281,8 +288,13 @@ internal fun ItemReviewScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Text("Review Scanned Items", color = Slate900, fontWeight = FontWeight.ExtraBold, fontSize = 30.sp)
-                Text("${reviewItems.size} items detected. Verify details before saving.", color = Slate600)
+                Text("Review Scanned Items", color = Slate900, fontWeight = FontWeight.Bold, fontSize = 28.sp, lineHeight = 32.sp)
+                Text(
+                    "${reviewItems.size} items detected. Verify details before saving.",
+                    color = Slate600,
+                    fontSize = 16.sp,
+                    lineHeight = 22.sp
+                )
             }
 
             items(reviewItems, key = { it.id }) { item ->
@@ -314,14 +326,33 @@ private fun ReviewScannedItemCard(item: ReviewItemUi, onEdit: () -> Unit, onDele
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
                 ReviewThumb(item = item)
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(item.name, color = Slate900, fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 26.sp)
+                    Text(
+                        item.name,
+                        color = Slate900,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        lineHeight = 22.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     Spacer(Modifier.height(4.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Badge(label = item.category.label.uppercase(), textColor = Slate600, bg = Gray100)
-                        Text("Qty: ${item.quantityLabel}", color = Slate600)
+                        Text(
+                            "Qty: ${item.quantityLabel}",
+                            color = Slate600,
+                            fontSize = 15.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                 }
                 Row {
@@ -387,12 +418,12 @@ private fun ReviewThumb(item: ReviewItemUi) {
     val bg = reviewThumbBackground(item.thumbnailRef)
     Box(
         modifier = Modifier
-            .size(78.dp)
+            .size(66.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(bg),
         contentAlignment = Alignment.Center
     ) {
-        Text(categoryEmoji(item.category), fontSize = 34.sp)
+        Text(categoryEmoji(item.category), fontSize = 24.sp)
     }
 }
 
@@ -421,7 +452,7 @@ private fun DashedAddMissingButton(onClick: () -> Unit) {
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Outlined.AddCircle, contentDescription = null, tint = Slate600)
-            Text("Add Missing Item", color = Slate600, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            Text("Add Missing Item", color = Slate600, fontWeight = FontWeight.Bold, fontSize = 18.sp)
         }
     }
 }

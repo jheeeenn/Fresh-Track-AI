@@ -2,7 +2,6 @@ package my.edu.utar.freshtrackai.ui.theme
 
 import android.app.Activity
 import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -64,7 +63,7 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun FreshTrackAITheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false,
     // Keep Stitch palette stable unless explicitly overridden.
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit

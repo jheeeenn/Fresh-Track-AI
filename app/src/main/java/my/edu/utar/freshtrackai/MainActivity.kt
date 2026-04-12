@@ -14,7 +14,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            FreshTrackAITheme {
+            FreshTrackAITheme(darkTheme = false, dynamicColor = false) {
                 FreshTrackDashboardScreen(modifier = Modifier.fillMaxSize())
             }
         }
