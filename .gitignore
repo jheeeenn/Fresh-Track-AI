@@ -33,3 +33,9 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# Local design/export artifacts (not required for app build)
+design_refs/
+stitch_wise_html/
+stitch_main_dashboard_refined.html
+stitch_main_dashboard_refined.png
