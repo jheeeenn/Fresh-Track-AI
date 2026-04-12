@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-error": "#ffffff",
+                    "surface-container-high": "#f3f4f6",
+                    "tertiary": "#22c55e",
+                    "on-tertiary": "#ffffff",
+                    "surface-container": "#f9fafb",
+                    "secondary-fixed-dim": "#9ca3af",
+                    "on-secondary-container": "#4b5563",
+                    "tertiary-container": "#dcfce7",
+                    "on-secondary": "#ffffff",
+                    "surface-container-lowest": "#ffffff",
+                    "inverse-on-surface": "#ffffff",
+                    "secondary-container": "#f3f4f6",
+                    "surface-container-low": "#ffffff",
+                    "surface-container-highest": "#e5e7eb",
+                    "tertiary-fixed": "#dcfce7",
+                    "surface-tint": "#22c55e",
+                    "on-secondary-fixed-variant": "#4b5563",
+                    "secondary-fixed": "#e5e7eb",
+                    "primary-fixed-dim": "#86efac",
+                    "surface-dim": "#f3f4f6",
+                    "on-primary-container": "#064e3b",
+                    "outline-variant": "#e5e7eb",
+                    "on-primary": "#ffffff",
+                    "on-primary-fixed-variant": "#065f46",
+                    "surface-bright": "#ffffff",
+                    "on-background": "#111827",
+                    "tertiary-fixed-dim": "#86efac",
+                    "on-tertiary-fixed": "#064e3b",
+                    "secondary": "#6b7280",
+                    "outline": "#d1d5db",
+                    "on-tertiary-container": "#064e3b",
+                    "on-tertiary-fixed-variant": "#15803d",
+                    "surface": "#ffffff",
+                    "error-container": "#fee2e2",
+                    "on-primary-fixed": "#064e3b",
+                    "on-error-container": "#991b1b",
+                    "surface-variant": "#f9fafb",
+                    "primary": "#22c55e",
+                    "error": "#ef4444",
+                    "primary-fixed": "#dcfce7",
+                    "on-secondary-fixed": "#111827",
+                    "primary-container": "#22c55e",
+                    "inverse-surface": "#111827",
+                    "inverse-primary": "#86efac",
+                    "background": "#ffffff",
+                    "on-surface": "#111827",
+                    "on-surface-variant": "#4b5563"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.5rem",
+                    "lg": "0.75rem",
+                    "xl": "1rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Geist"],
+                    "body": ["Geist"],
+                    "label": ["Geist"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Geist', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+          min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-white border-b border-outline-variant flex justify-between items-center px-4 h-16">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">inventory_2</span>
+<h1 class="text-xl font-bold text-on-background tracking-tight">Fresh Track AI</h1>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined text-on-surface-variant">account_circle</span>
+</button>
+</header>
+<main class="pt-24 px-4 max-w-4xl mx-auto">
+<!-- Hero AI Action Section -->
+<section class="mb-10">
+<div class="bg-surface-container border border-outline-variant rounded-xl p-6 relative overflow-hidden">
+<div class="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-primary/5 rounded-full blur-3xl"></div>
+<div class="relative z-10">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<span class="text-xs font-bold uppercase tracking-widest text-primary">Inventory Insights</span>
+</div>
+<h2 class="text-2xl font-bold mb-4 tracking-tight text-on-surface">Got ingredients about to expire?</h2>
+<p class="text-on-surface-variant mb-6 max-w-md">Our AI analyzed your pantry. You have chicken, spinach, and heavy cream that should be used by tomorrow.</p>
+<button class="bg-primary text-on-primary px-6 py-3 rounded-lg font-bold flex items-center gap-2 hover:bg-[#16a34a] active:scale-95 transition-all shadow-sm shadow-primary/20">
+<span class="material-symbols-outlined">psychology</span>
+                        Generate Recipe
+                    </button>
+</div>
+</div>
+</section>
+<!-- Recipe Feed Header -->
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-lg font-bold text-on-surface">Recommended for You</h3>
+<button class="text-primary text-sm font-semibold flex items-center gap-1 hover:underline">
+                View All <span class="material-symbols-outlined text-xs">arrow_forward</span>
+</button>
+</div>
+<!-- Recipe Grid / List -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Recipe Card 1 -->
+<div class="group bg-white border border-outline-variant rounded-xl overflow-hidden hover:border-primary transition-colors cursor-pointer shadow-sm">
+<div class="aspect-video w-full overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Close-up of a vibrant chicken stir fry with fresh peppers, snap peas, and sesame seeds in a dark cast iron skillet" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA62Szb-5R1heCZOTswnQl9IOdMI2x8wQIgBftMYhXVEoXb4nJM9JFooaLVuehF7g0opAWpqPzJMQzvqUVtaPalRTPJtSSmiRSkN2UJ14ILtqttYhs2rNE8ZEeWMVEhkW3ujsVjGtnEYm017TnHuvz9SsmKIM3lRQhxsvoJWLfxRuX4dbfis07N0r0LT1V4Fr0-zOL2sEZU44N1v0-jeVcFo5B0yW_1gx5DBbvdMvCHZfZedYsZ_CEHZE7pbk0c2s4F5JF6xkxc9g"/>
+</div>
+<div class="p-5">
+<div class="flex justify-between items-start mb-2">
+<h4 class="font-bold text-on-surface group-hover:text-primary transition-colors">Quick Chicken Stir-fry</h4>
+<span class="bg-tertiary-container text-on-tertiary-container text-[10px] px-2 py-0.5 rounded font-bold uppercase">15 MIN</span>
+</div>
+<p class="text-sm text-on-surface-variant line-clamp-2">A high-protein, veggie-packed meal using your current chicken breast and bell pepper stock.</p>
+<div class="mt-4 flex items-center gap-3">
+<div class="flex -space-x-2">
+<div class="w-7 h-7 rounded-full border-2 border-white bg-surface-container-high flex items-center justify-center text-xs">🍗</div>
+<div class="w-7 h-7 rounded-full border-2 border-white bg-surface-container-high flex items-center justify-center text-xs">🫑</div>
+</div>
+<span class="text-[11px] font-medium text-on-surface-variant">Uses 3 pantry items</span>
+</div>
+</div>
+</div>
+<!-- Recipe Card 2 -->
+<div class="group bg-white border border-outline-variant rounded-xl overflow-hidden hover:border-primary transition-colors cursor-pointer shadow-sm">
+<div class="aspect-video w-full overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Artisanal creamy mushroom pasta with fresh herbs and shaved parmesan on a dark slate plate" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkHEjG4yH-ZsR81c6wd1cJMmgXf7pH6bqCLxDfdAueRCyW-rGibUtb3e9vEBfK9EkRGX0cChBFFJsZxDu4GByKvQsmwsoqsqesZzZr6g_DIXcuyD0JbjuaioXM7l7uFWX2Xuzsbr789398cBoa1P0GGHKMZO-0QIniZQ6yJ-aMSjEFOAYUFImzCeoVB_AnNqPHh8X_Cjxsaa8jAwsJatY5WSOY_Ih9v-PJjfhjZ48mPEpP8Z8n_jFuWr9tyycrF9qO9lXqT6e_6w"/>
+</div>
+<div class="p-5">
+<div class="flex justify-between items-start mb-2">
+<h4 class="font-bold text-on-surface group-hover:text-primary transition-colors">One-Pot Creamy Pasta</h4>
+<span class="bg-tertiary-container text-on-tertiary-container text-[10px] px-2 py-0.5 rounded font-bold uppercase">25 MIN</span>
+</div>
+<p class="text-sm text-on-surface-variant line-clamp-2">The perfect way to use that heavy cream before it expires. Rich, savory, and minimal cleanup.</p>
+<div class="mt-4 flex items-center gap-3">
+<div class="flex -space-x-2">
+<div class="w-7 h-7 rounded-full border-2 border-white bg-surface-container-high flex items-center justify-center text-xs">🥛</div>
+<div class="w-7 h-7 rounded-full border-2 border-white bg-surface-container-high flex items-center justify-center text-xs">🍝</div>
+</div>
+<span class="text-[11px] font-medium text-on-surface-variant">Uses 2 expiring items</span>
+</div>
+</div>
+</div>
+<!-- Recipe Card 3 -->
+<div class="group bg-white border border-outline-variant rounded-xl overflow-hidden hover:border-primary transition-colors cursor-pointer shadow-sm">
+<div class="aspect-video w-full overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Healthy buddha bowl with kale, roasted chickpeas, avocado and lemon tahini dressing" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCNCmiMzACTOztBXYou0nItdcmuYwiX_aTrtKaeREaDS6R_xZHNqaER6qWJGDlfkVC8JiXaQuqE1GqMtwi_o233d-gNKbwAlVqZZGh-Qqcgsj6M604Hk-hBTSG57sIwg-7f78g1z0HfsvWNVva5Fr23rz3yKHU8R1JHBx3SpPUuEMjJ3IkPt4LvwecdPt0NyS9cSlLYancPJh857IKPNirRZPhrFBuS3fmmXosGkcP7sWvTJofAea8F5GhGer6LCTPnka3RbB-KkA"/>
+</div>
+<div class="p-5">
+<div class="flex justify-between items-start mb-2">
+<h4 class="font-bold text-on-surface group-hover:text-primary transition-colors">Crispy Chickpea Kale Bowl</h4>
+<span class="bg-tertiary-container text-on-tertiary-container text-[10px] px-2 py-0.5 rounded font-bold uppercase">10 MIN</span>
+</div>
+<p class="text-sm text-on-surface-variant line-clamp-2">Fresh, light, and utilizes the kale sitting in your crisper drawer. Packed with fiber.</p>
+<div class="mt-4 flex items-center gap-3">
+<div class="flex -space-x-2">
+<div class="w-7 h-7 rounded-full border-2 border-white bg-surface-container-high flex items-center justify-center text-xs">🥬</div>
+<div class="w-7 h-7 rounded-full border-2 border-white bg-surface-container-high flex items-center justify-center text-xs">🫛</div>
+</div>
+<span class="text-[11px] font-medium text-on-surface-variant">Low calorie option</span>
+</div>
+</div>
+</div>
+<!-- Recipe Card 4 -->
+<div class="group bg-white border border-outline-variant rounded-xl overflow-hidden hover:border-primary transition-colors cursor-pointer shadow-sm">
+<div class="aspect-video w-full overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Gourmet avocado toast with poached eggs and chili flakes on thick sourdough bread" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVNJRomM-RIw2QgSloKbfD26Tm_iYQZNyL0xnwDtCaq8bjrjVPAauVQIt_hEcpsZ8Q4G7vfH-ZhyW4fl7uTudWjXhrlVFk5sZVxfwhQDR25JvH0wBdnaN6Fhnd0Q3Ph4tR2LdW_Ew1s3iUCOyh3W9kqdfyvfRHrlEq1UhaXQRzb2KmqGsESpExSLaNcE5NtmiCQl4t3loJM_B0zIqUdwnrV9Wj3FJQgL0jK24tM5PwMfIL1N0a5yzo04lfo-zkV3QG8rd3T4-JLA"/>
+</div>
+<div class="p-5">
+<div class="flex justify-between items-start mb-2">
+<h4 class="font-bold text-on-surface group-hover:text-primary transition-colors">Obsidian Breakfast Toast</h4>
+<span class="bg-tertiary-container text-on-tertiary-container text-[10px] px-2 py-0.5 rounded font-bold uppercase">5 MIN</span>
+</div>
+<p class="text-sm text-on-surface-variant line-clamp-2">Quick fuel for developers. Uses eggs and that last half of an avocado in your fridge.</p>
+<div class="mt-4 flex items-center gap-3">
+<div class="flex -space-x-2">
+<div class="w-7 h-7 rounded-full border-2 border-white bg-surface-container-high flex items-center justify-center text-xs">🥑</div>
+<div class="w-7 h-7 rounded-full border-2 border-white bg-surface-container-high flex items-center justify-center text-xs">🥚</div>
+</div>
+<span class="text-[11px] font-medium text-on-surface-variant">High protein breakfast</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 bg-white border-t border-outline-variant flex justify-around items-center h-20 pb-safe px-2">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-geist text-[12px] font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">document_scanner</span>
+<span class="font-geist text-[12px] font-medium">Scan</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary font-bold transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">restaurant_menu</span>
+<span class="font-geist text-[12px] font-medium">Recipe</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-geist text-[12px] font-medium">List</span>
+</a>
+</nav>
+</body></html>
