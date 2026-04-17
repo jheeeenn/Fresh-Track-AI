@@ -59,3 +59,14 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     testImplementation("junit:junit:4.13.2")
 }
+
+dependencies {
+    // WorkManager
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // Notifications
+    implementation("androidx.core:core-ktx:1.13.1")
+
+    // Unit testing
+    testImplementation("junit:junit:4.13.2")
+}
