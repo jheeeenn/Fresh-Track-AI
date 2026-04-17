@@ -59,3 +59,20 @@
 ## Note to Team
 - UI layer is **Compose Kotlin**, **not XML/RecyclerView**.
 - Please wire backend/data modules behind existing Compose state contracts first, then refactor only if necessary.
+
+## Integration Rules (Locked)
+- Build/tooling baseline:
+  - AGP: `9.0.1`
+  - Gradle wrapper: `9.1.0`
+  - Kotlin Compose plugin: `2.0.21`
+- Identity baseline:
+  - Namespace/Application ID package family: `my.edu.utar.freshtrackai`
+  - Avoid reintroducing `freshgroup` package IDs in project-level configs.
+- Ownership boundaries:
+  - UI/Navigation (Member 1): Compose screens, route flow, tokens/components.
+  - DB (Member 2), Expiry+Notifications (Member 3), API/AI (Member 4): implement in data/domain layers and bridge to existing UI contracts.
+- Restricted files (change only with team agreement):
+  - `settings.gradle.kts`
+  - root `build.gradle.kts`
+  - `app/build.gradle.kts`
+  - `gradle/libs.versions.toml`
