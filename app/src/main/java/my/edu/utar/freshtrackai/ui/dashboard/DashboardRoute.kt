@@ -30,6 +30,7 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
     var expiringSearch by rememberSaveable { mutableStateOf("") }
     var expiringFilter by rememberSaveable { mutableStateOf<InventoryCategory?>(null) }
     var editingReviewItemId by remember { mutableStateOf<String?>(null) }
+    var editingInventoryItemId by remember { mutableStateOf<String?>(null) }
     var addItemOrigin by remember { mutableStateOf(AddItemOrigin.ItemReview) }
     var addFormDraft by remember { mutableStateOf(AddItemFormDraft()) }
     var selectedRecipeId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -82,8 +83,19 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                 onScan = { screen = WiseScreen.SmartScan },
                 onAddItem = {
                     addItemOrigin = AddItemOrigin.Dashboard
-                    editingReviewItemId = null
+                    editingInventoryItemId = null
                     addFormDraft = AddItemFormDraft()
+                    screen = WiseScreen.AddMissingItem
+                },
+                onEditItem = { item ->
+                    addItemOrigin = AddItemOrigin.Dashboard
+                    editingInventoryItemId = item.id
+                    addFormDraft = AddItemFormDraft(
+                        name = item.name,
+                        quantity = item.quantityLabel,
+                        category = item.category,
+                        expiryDate = "${item.expiresInDays}d"
+                    )
                     screen = WiseScreen.AddMissingItem
                 },
                 onTabSelected = toRootTab
@@ -110,7 +122,7 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
             )
             WiseScreen.AddMissingItem -> AddMissingItemScreen(
                 draft = addFormDraft,
-                isEditMode = editingReviewItemId != null,
+                isEditMode = editingReviewItemId != null || editingInventoryItemId != null,
                 onDraftChange = { addFormDraft = it },
                 onSubmit = {
                     when (addItemOrigin) {
@@ -134,10 +146,22 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                             screen = WiseScreen.ItemReview
                         }
                         AddItemOrigin.Dashboard -> {
-                            inventory.add(draftToInventoryItem(addFormDraft))
-                            toastMessage = "Item added to inventory."
+                            if (editingInventoryItemId != null) {
+                                val idx = inventory.indexOfFirst { it.id == editingInventoryItemId }
+                                if (idx >= 0) {
+                                    val updated = draftToInventoryItem(addFormDraft).copy(
+                                        id = editingInventoryItemId!!,
+                                        addedDaysAgo = inventory[idx].addedDaysAgo
+                                    )
+                                    inventory[idx] = updated
+                                    toastMessage = "Food details updated."
+                                }
+                            } else {
+                                inventory.add(draftToInventoryItem(addFormDraft))
+                                toastMessage = "Item added to inventory."
+                            }
                             addFormDraft = AddItemFormDraft()
-                            editingReviewItemId = null
+                            editingInventoryItemId = null
                             screen = WiseScreen.MainDashboard
                         }
                     }
@@ -296,4 +320,3 @@ private fun PreviewFreshTrackDashboard() {
         FreshTrackDashboardScreen()
     }
 }
-

@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import my.edu.utar.freshtrackai.logic.ExpiryCheckWorker
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddCircle
 import androidx.compose.material.icons.outlined.AutoAwesome
@@ -64,10 +65,13 @@ internal fun MainDashboardScreen(
     onRecipe: () -> Unit,
     onScan: () -> Unit,
     onAddItem: () -> Unit,
+    onEditItem: (InventoryItem) -> Unit,
     onTabSelected: (RootTab) -> Unit
 ) {
     val expiring = inventory.mapNotNull { it.toExpiringOrNull() }.sortedBy { it.expiresInDays }
     val grouped = InventoryCategory.entries.associateWith { category -> inventory.filter { it.category == category } }
+
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
@@ -80,83 +84,95 @@ internal fun MainDashboardScreen(
                 contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 110.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-            item {
-                Text("KITCHEN OVERVIEW", color = Slate600, fontSize = 10.sp, letterSpacing = 1.sp)
-                Text(
-                    buildAnnotatedString {
-                        append("You have ")
-                        pushStyle(SpanStyle(color = Emerald, fontWeight = FontWeight.ExtraBold))
-                        append(inventory.size.toString())
-                        pop()
-                        append(" items trackable")
-                    },
-                    fontSize = 30.sp,
-                    lineHeight = 32.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Slate900
-                )
-            }
 
-            item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("Expiring Soon", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Slate900)
-                    Text("View all", color = Emerald, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(onClick = onViewAllExpiring))
-                }
-            }
-
-            item {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(expiring) { item ->
-                        ExpiringCarouselCard(item = item, onRecipe = onRecipe)
+                item {
+                    Button(
+                        onClick = { my.edu.utar.freshtrackai.logic.ExpiryCheckWorker.runNow(context) },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = RoseRed, contentColor = White),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Text("TEST PUSH NOTIFICATIONS", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
                     }
                 }
-            }
 
-            item {
-                Button(
-                    onClick = onScan,
-                    modifier = Modifier.fillMaxWidth().height(88.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Emerald, contentColor = White)
-                ) {
+                item {
+                    Text("KITCHEN OVERVIEW", color = Slate600, fontSize = 10.sp, letterSpacing = 1.sp)
+                    Text(
+                        buildAnnotatedString {
+                            append("You have ")
+                            pushStyle(SpanStyle(color = Emerald, fontWeight = FontWeight.ExtraBold))
+                            append(inventory.size.toString())
+                            pop()
+                            append(" items trackable")
+                        },
+                        fontSize = 30.sp,
+                        lineHeight = 32.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Slate900
+                    )
+                }
+
+                item {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Column(horizontalAlignment = Alignment.Start) {
-                            Text("Scan Groceries", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
-                            Text("AI vision auto-import", fontSize = 13.sp)
+                        Text("Expiring Soon", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Slate900)
+                        Text("View all", color = Emerald, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(onClick = onViewAllExpiring))
+                    }
+                }
+
+                item {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(expiring) { item ->
+                            ExpiringCarouselCard(item = item, onRecipe = onRecipe)
                         }
-                        Icon(Icons.Outlined.QrCodeScanner, contentDescription = null)
                     }
                 }
-            }
 
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    QuickActionCard(
-                        modifier = Modifier.weight(1f),
-                        title = "Add Item",
-                        icon = Icons.Outlined.AddCircle,
-                        iconTint = RoseRed,
-                        onClick = onAddItem
-                    )
-                    QuickActionCard(
-                        modifier = Modifier.weight(1f),
-                        title = "Checklist",
-                        icon = Icons.Outlined.FormatListBulleted,
-                        iconTint = Emerald,
-                        onClick = { onTabSelected(RootTab.List) }
-                    )
-                }
-            }
-
-            item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("Current Inventory", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Slate900)
-                    Row {
-                        IconButton(onClick = {}) { Icon(Icons.Outlined.Sort, contentDescription = "Sort", tint = Slate600) }
-                        IconButton(onClick = {}) { Icon(Icons.Outlined.FilterList, contentDescription = "Filter", tint = Slate600) }
+                item {
+                    Button(
+                        onClick = onScan,
+                        modifier = Modifier.fillMaxWidth().height(88.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Emerald, contentColor = White)
+                    ) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Column(horizontalAlignment = Alignment.Start) {
+                                Text("Scan Groceries", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+                                Text("AI vision auto-import", fontSize = 13.sp)
+                            }
+                            Icon(Icons.Outlined.QrCodeScanner, contentDescription = null)
+                        }
                     }
                 }
-            }
+
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        QuickActionCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Add Item",
+                            icon = Icons.Outlined.AddCircle,
+                            iconTint = RoseRed,
+                            onClick = onAddItem
+                        )
+                        QuickActionCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Checklist",
+                            icon = Icons.Outlined.FormatListBulleted,
+                            iconTint = Emerald,
+                            onClick = { onTabSelected(RootTab.List) }
+                        )
+                    }
+                }
+
+                item {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("Current Inventory", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Slate900)
+                        Row {
+                            IconButton(onClick = {}) { Icon(Icons.Outlined.Sort, contentDescription = "Sort", tint = Slate600) }
+                            IconButton(onClick = {}) { Icon(Icons.Outlined.FilterList, contentDescription = "Filter", tint = Slate600) }
+                        }
+                    }
+                }
 
                 InventoryCategory.entries.forEach { category ->
                     val categoryItems = grouped[category].orEmpty()
@@ -171,7 +187,7 @@ internal fun MainDashboardScreen(
                             )
                         }
                         items(categoryItems) { item ->
-                            InventoryRow(item = item)
+                            InventoryRow(item = item, onClick = { onEditItem(item) })
                         }
                     }
                 }
@@ -201,8 +217,8 @@ internal fun ExpiringSoonAllScreen(
     val filtered = expiring.filter { item ->
         val categoryOk = selectedCategory == null || item.category == selectedCategory
         val searchOk = searchQuery.isBlank() ||
-            item.name.contains(searchQuery, ignoreCase = true) ||
-            item.category.label.contains(searchQuery, ignoreCase = true)
+                item.name.contains(searchQuery, ignoreCase = true) ||
+                item.category.label.contains(searchQuery, ignoreCase = true)
         categoryOk && searchOk
     }
 
@@ -373,11 +389,12 @@ private fun QuickActionCard(modifier: Modifier, title: String, icon: ImageVector
 }
 
 @Composable
-private fun InventoryRow(item: InventoryItem) {
+private fun InventoryRow(item: InventoryItem, onClick: () -> Unit) {
     Card(
         colors = CardDefaults.cardColors(containerColor = White),
         border = androidx.compose.foundation.BorderStroke(1.dp, Gray200),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.clickable(onClick = onClick)
     ) {
         Row(
             Modifier.fillMaxWidth().padding(10.dp),
@@ -402,5 +419,3 @@ private fun InventoryRow(item: InventoryItem) {
         }
     }
 }
-
-
