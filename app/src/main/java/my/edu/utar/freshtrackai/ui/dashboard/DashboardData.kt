@@ -17,13 +17,13 @@ internal fun InventoryItem.toExpiringOrNull(): ExpiringItem? {
 
 internal fun urgencyForDays(days: Int): ExpiryBadge? {
     // 1. Call Member 3's upgraded math logic
-    val status = my.edu.utar.freshtrackai.logic.ExpiryCalculator.getExpiryStatus(days.toLong())
+    val status = my.edu.utar.freshtrackai.logic.`ExpiryCalculator`.getExpiryStatus(days.toLong())
 
     // 2. Translate your logic into Member 1's UI badges
     return when (status) {
-        my.edu.utar.freshtrackai.logic.ExpiryCalculator.ExpiryStatus.EXPIRED -> ExpiryBadge.Critical
-        my.edu.utar.freshtrackai.logic.ExpiryCalculator.ExpiryStatus.CRITICAL -> ExpiryBadge.Critical
-        my.edu.utar.freshtrackai.logic.ExpiryCalculator.ExpiryStatus.WATCH -> ExpiryBadge.Watch
+        my.edu.utar.freshtrackai.logic.`ExpiryCalculator`.ExpiryStatus.EXPIRED -> ExpiryBadge.Critical
+        my.edu.utar.freshtrackai.logic.`ExpiryCalculator`.ExpiryStatus.CRITICAL -> ExpiryBadge.Critical
+        my.edu.utar.freshtrackai.logic.`ExpiryCalculator`.ExpiryStatus.WATCH -> ExpiryBadge.Watch
         else -> null
     }
 }
@@ -158,7 +158,7 @@ internal fun draftToInventoryItem(draft: AddItemFormDraft): InventoryItem = Inve
 )
 
 internal fun estimateExpiresInDays(input: String, fallback: Int): Int {
-    return my.edu.utar.freshtrackai.logic.ExpiryCalculator.estimateExpiresInDays(input).toInt()
+    return my.edu.utar.freshtrackai.logic.`ExpiryCalculator`.estimateExpiresInDays(input).toInt()
 }
 
 internal fun reviewThumbBackground(ref: String): Color {

@@ -2,9 +2,9 @@ package my.edu.utar.freshtrackai.logic
 
 import android.content.Context
 import androidx.work.*
-import my.edu.utar.freshtrackai.logic.ExpiryCalculator
-import my.edu.utar.freshtrackai.logic.ExpiryCalculator.ExpiryStatus
-import my.edu.utar.freshtrackai.logic.NotificationHelper
+// --- I ONLY FIXED THESE 3 LINES ---
+import my.edu.utar.freshtrackai.logic.`ExpiryCalculator`.ExpiryStatus
+// ----------------------------------
 import java.time.LocalDate
 import java.util.concurrent.TimeUnit
 
@@ -107,8 +107,29 @@ class ExpiryCheckWorker(
          * Call this once in your Application.onCreate() or MainActivity.
          *
          * Usage:
-         *   ExpiryCheckWorker.scheduleDailyCheck(applicationContext)
+         * ExpiryCheckWorker.scheduleDailyCheck(applicationContext)
          */
+        fun scheduleDailyCheck(context: Context) {
+            val constraints = Constraints.Builder()
+                .setRequiresBatteryNotLow(true)
+                .build()
+
+            // CHANGED: 15 Minutes is the absolute lowest Android allows
+            val dailyWorkRequest = PeriodicWorkRequestBuilder<ExpiryCheckWorker>(
+                repeatInterval = 15,
+                repeatIntervalTimeUnit = TimeUnit.MINUTES
+            )
+                .setConstraints(constraints)
+                // CHANGED: Removed the Initial Delay so the first one happens quickly
+                .build()
+
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                WORK_NAME,
+                ExistingPeriodicWorkPolicy.KEEP,
+                dailyWorkRequest
+            )
+        }
+        /*
         fun scheduleDailyCheck(context: Context) {
             val constraints = Constraints.Builder()
                 .setRequiresBatteryNotLow(true) // don't run on critically low battery
@@ -128,7 +149,7 @@ class ExpiryCheckWorker(
                 dailyWorkRequest
             )
         }
-
+        */
         /**
          * Cancels the scheduled background check.
          * Call this if the user disables notifications in settings.
@@ -142,7 +163,7 @@ class ExpiryCheckWorker(
          * Useful for testing without waiting 24 hours.
          *
          * Usage:
-         *   ExpiryCheckWorker.runNow(applicationContext)
+         * ExpiryCheckWorker.runNow(applicationContext)
          */
         fun runNow(context: Context) {
             val oneTimeRequest = OneTimeWorkRequestBuilder<ExpiryCheckWorker>().build()
