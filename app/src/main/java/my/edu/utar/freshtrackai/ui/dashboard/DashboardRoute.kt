@@ -16,16 +16,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import java.util.UUID
-import kotlinx.coroutines.delay
+
 import my.edu.utar.freshtrackai.ui.theme.FreshTrackAITheme
+
+import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.viewmodel.compose.viewModel
+import my.edu.utar.freshtrackai.ai.RecipeGenerationViewModel
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import my.edu.utar.freshtrackai.ai.ReceiptOcrProvider
+import my.edu.utar.freshtrackai.ai.ReceiptReviewMapper
+import my.edu.utar.freshtrackai.ai.ScanCaptureBitmapResolver
 
 @Composable
 fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
     var screen by rememberSaveable { mutableStateOf(WiseScreen.AppLauncher) }
     val inventory = remember { mutableStateListOf<InventoryItem>().apply { addAll(seedInventoryItems()) } }
-    val reviewItems = remember { mutableStateListOf<ReviewItemUi>().apply { addAll(seedReviewItems()) } }
-    val recipesAll = remember { seedRecipes() }
-    val recipeRecommendations = remember { mutableStateListOf<RecipeUi>() }
+    val reviewItems = remember { mutableStateListOf<ReviewItemUi>() }
+
+
     val shoppingListItems = remember { mutableStateListOf<ShoppingListItemUi>().apply { addAll(seedShoppingListItems()) } }
     var expiringSearch by rememberSaveable { mutableStateOf("") }
     var expiringFilter by rememberSaveable { mutableStateOf<InventoryCategory?>(null) }
@@ -35,10 +45,35 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
     var selectedRecipeId by rememberSaveable { mutableStateOf<String?>(null) }
     var recipeBackTarget by rememberSaveable { mutableStateOf(WiseScreen.AiRecipes) }
     var recipePreferences by remember { mutableStateOf(RecipePreferencesUi()) }
-    var recipeLoading by remember { mutableStateOf(false) }
-    var recipeRefreshTick by rememberSaveable { mutableStateOf(0) }
+    val recipeViewModel: RecipeGenerationViewModel = viewModel() // new
+    val recipeUiState by recipeViewModel.uiState.collectAsState() // new
+
+    fun refreshRecipes() {
+        recipeViewModel.generateRecipes(
+            inventory = inventory.toList(),
+            preferences = recipePreferences
+        )
+    }
+
+
+    LaunchedEffect(recipeUiState.recipes) {
+        if (recipeUiState.recipes.isNotEmpty()) {
+            if (selectedRecipeId == null || recipeUiState.recipes.none { it.id == selectedRecipeId }) {
+                selectedRecipeId = recipeUiState.recipes.first().id
+            }
+        }
+    }
+
+
     var toastMessage by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(recipeUiState.errorMessage) {
+        val message = recipeUiState.errorMessage ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        recipeViewModel.clearError()
+    }
 
     LaunchedEffect(toastMessage) {
         val message = toastMessage ?: return@LaunchedEffect
@@ -46,22 +81,7 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
         toastMessage = null
     }
 
-    LaunchedEffect(recipeRefreshTick, recipePreferences, inventory.joinToString("|") { it.id }) {
-        recipeLoading = true
-        delay(450)
-        val generated = generateRecipesForPreferences(
-            recipesAll = recipesAll,
-            inventory = inventory,
-            preferences = recipePreferences,
-            refreshTick = recipeRefreshTick
-        )
-        recipeRecommendations.clear()
-        recipeRecommendations.addAll(generated)
-        if (selectedRecipeId == null || recipesAll.none { it.id == selectedRecipeId }) {
-            selectedRecipeId = recipeRecommendations.firstOrNull()?.id
-        }
-        recipeLoading = false
-    }
+
 
     val toRootTab: (RootTab) -> Unit = { tab ->
         screen = when (tab) {
@@ -100,11 +120,40 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                 onTabSelected = toRootTab
             )
             WiseScreen.SmartScan -> SmartScanScreen(
-                onDone = {
-                    if (reviewItems.isEmpty()) {
-                        reviewItems.addAll(seedReviewItems())
+                onDone = { mode, captures ->
+                    if (captures.isEmpty()) {
+                        toastMessage = "No image captured."
+                        return@SmartScanScreen
                     }
-                    screen = WiseScreen.ItemReview
+
+                    if (mode == ScanMode.Receipt) {
+                        android.util.Log.d("RECEIPT_FLOW", "Mode = $mode, captures = ${captures.size}")
+                        scope.launch {
+                            try {
+                                val bitmap = ScanCaptureBitmapResolver.resolve(context, captures.first())
+                                val parsed = ReceiptOcrProvider.get(context).parseReceipt(bitmap)
+                                android.util.Log.d("RECEIPT_FLOW", "Parsed item count = ${parsed.items.size}")
+                                android.util.Log.d("RECEIPT_FLOW", "Parsed items = ${parsed.items}")
+
+                                val mapped = ReceiptReviewMapper.map(parsed)
+                                android.util.Log.d("RECEIPT_FLOW", "Mapped review count = ${mapped.size}")
+                                android.util.Log.d("RECEIPT_FLOW", "Mapped review items = ${mapped.map { it.name }}")
+
+                                reviewItems.clear()
+                                reviewItems.addAll(mapped)
+
+                                toastMessage = "Parsed ${mapped.size} item(s) from receipt."
+                                screen = WiseScreen.ItemReview
+                            } catch (e: Exception) {
+                                toastMessage = e.message ?: "Failed to parse receipt."
+                            }
+                        }
+                    } else {
+                        android.util.Log.d("RECEIPT_FLOW", "Non-receipt branch hit, using seedReviewItems()")
+                        reviewItems.clear()
+                        reviewItems.addAll(seedReviewItems())
+                        screen = WiseScreen.ItemReview
+                    }
                 },
                 onTabSelected = toRootTab
             )
@@ -188,11 +237,11 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
             )
             WiseScreen.RecipeViewAll -> RecipeViewAllScreen(
                 inventory = inventory,
-                recipes = recipeRecommendations,
+                recipes = recipeUiState.recipes,
                 preferences = recipePreferences,
-                loading = recipeLoading,
+                loading = recipeUiState.isLoading,
                 onPreferencesChange = { recipePreferences = it },
-                onRegenerate = { recipeRefreshTick++ },
+                onRegenerate = { refreshRecipes() },
                 onOpenRecipe = { recipeId ->
                     selectedRecipeId = recipeId
                     recipeBackTarget = WiseScreen.RecipeViewAll
@@ -232,7 +281,13 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                 onTabSelected = toRootTab
             )
             WiseScreen.RecipeDetails -> {
-                val recipe = recipesAll.firstOrNull { it.id == selectedRecipeId } ?: recipeRecommendations.firstOrNull() ?: recipesAll.first()
+                val recipe = recipeUiState.recipes.firstOrNull { it.id == selectedRecipeId }
+                    ?: recipeUiState.recipes.firstOrNull()
+
+                if (recipe == null) {
+                    screen = recipeBackTarget
+                    return@Box
+                }
                 RecipeDetailsScreen(
                     recipe = recipe,
                     onAddMissingToShoppingList = { current ->
@@ -254,9 +309,9 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
             }
             WiseScreen.AiRecipes -> AiRecipesScreen(
                 inventory = inventory,
-                recipes = recipeRecommendations.take(4),
-                loading = recipeLoading,
-                onGenerate = { recipeRefreshTick++ },
+                recipes = recipeUiState.recipes.take(4),
+                loading = recipeUiState.isLoading,
+                onGenerate = { refreshRecipes() },
                 onViewAll = { screen = WiseScreen.RecipeViewAll },
                 onOpenRecipe = { recipeId ->
                     selectedRecipeId = recipeId
