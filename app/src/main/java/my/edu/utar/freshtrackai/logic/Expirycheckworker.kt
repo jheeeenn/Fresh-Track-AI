@@ -65,7 +65,8 @@ class ExpiryCheckWorker(
             Result.success()
         } catch (e: Exception) {
             e.printStackTrace()
-            Result.retry() // WorkManager will retry on failure
+            // ENHANCEMENT: Professional retry logic. Don't retry infinitely and drain battery.
+            if (runAttemptCount < 3) Result.retry() else Result.failure()
         }
     }
 
@@ -91,8 +92,20 @@ class ExpiryCheckWorker(
      */
     private fun loadInventoryItems(): List<InventoryItemPlaceholder> {
         // Stub — returns empty list until DB is connected
-        return emptyList()
-    }
+        return listOf(
+            // Expired item (Will trigger EXPIRED notification)
+            InventoryItemPlaceholder(1, "Old Bread", "Bakery", LocalDate.now().minusDays(10), LocalDate.now().minusDays(2)),
+
+            // Critical item (Will trigger CRITICAL notification)
+            InventoryItemPlaceholder(2, "Fresh Milk", "Dairy", LocalDate.now(), LocalDate.now().plusDays(2)),
+
+            // Watch item (Will trigger WATCH notification)
+            InventoryItemPlaceholder(3, "Yogurt", "Dairy", LocalDate.now(), LocalDate.now().plusDays(6)),
+
+            // Fresh item (Will NOT trigger any notification)
+            InventoryItemPlaceholder(4, "Canned Beans", "Pantry", LocalDate.now(), LocalDate.now().plusDays(30))
+        )
+    } // <-- Removed the extra '}' that was here!
 
     // ─────────────────────────────────────────────────────────────
     // Static scheduler — call this from Application or MainActivity
@@ -112,6 +125,7 @@ class ExpiryCheckWorker(
         fun scheduleDailyCheck(context: Context) {
             val constraints = Constraints.Builder()
                 .setRequiresBatteryNotLow(true)
+                .setRequiresStorageNotLow(true) // ENHANCEMENT: Avoid crashing phones with full storage
                 .build()
 
             // CHANGED: 15 Minutes is the absolute lowest Android allows
@@ -120,6 +134,8 @@ class ExpiryCheckWorker(
                 repeatIntervalTimeUnit = TimeUnit.MINUTES
             )
                 .setConstraints(constraints)
+                // ENHANCEMENT: Smart backoff if it fails (wait 10 mins before retrying)
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.MINUTES)
                 // CHANGED: Removed the Initial Delay so the first one happens quickly
                 .build()
 

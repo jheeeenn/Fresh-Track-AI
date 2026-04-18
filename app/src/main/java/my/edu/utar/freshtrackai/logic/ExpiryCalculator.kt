@@ -4,6 +4,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.time.temporal.ChronoUnit
+import kotlin.math.abs
 
 /**
  * ExpiryCalculator.kt
@@ -15,8 +16,8 @@ import java.time.temporal.ChronoUnit
  * - Determining expiry status (FRESH / WATCH / CRITICAL / EXPIRED)
  *
  * Replaces Ian's mock functions in DashboardData.kt:
- *   - urgencyForDays(days: Int)
- *   - estimateExpiresInDays(...)
+ * - urgencyForDays(days: Int)
+ * - estimateExpiresInDays(...)
  */
 object ExpiryCalculator {
 
@@ -31,10 +32,13 @@ object ExpiryCalculator {
         EXPIRED     // 0 or negative days
     }
 
+    // ENHANCEMENT: Added UI-ready fields with default values so it doesn't break existing code
     data class ExpiryResult(
         val daysRemaining: Long,
         val status: ExpiryStatus,
-        val expiryDate: LocalDate
+        val expiryDate: LocalDate,
+        val colorHex: String = "#4CAF50", // Professional UI tip: Logic suggests urgency color
+        val displayLabel: String = ""
     )
 
     // ─────────────────────────────────────────────────────────────
@@ -113,7 +117,20 @@ object ExpiryCalculator {
     fun calculate(expiryDate: LocalDate): ExpiryResult {
         val days   = daysUntilExpiry(expiryDate)
         val status = getExpiryStatus(days)
-        return ExpiryResult(daysRemaining = days, status = status, expiryDate = expiryDate)
+
+        // ENHANCEMENT: Injecting the professional UI colors and labels here
+        return ExpiryResult(
+            daysRemaining = days,
+            status = status,
+            expiryDate = expiryDate,
+            colorHex = when(status) {
+                ExpiryStatus.EXPIRED -> "#B00020" // Material Error Red
+                ExpiryStatus.CRITICAL -> "#FF9800" // Warning Orange
+                ExpiryStatus.WATCH -> "#FBC02D"    // Watch Yellow
+                ExpiryStatus.FRESH -> "#4CAF50"    // Success Green
+            },
+            displayLabel = expiryDisplayText(days)
+        )
     }
 
     /**
@@ -194,7 +211,7 @@ object ExpiryCalculator {
      * e.g. "Expires in 3 days", "Expired 2 days ago", "Expires today!"
      */
     fun expiryDisplayText(daysRemaining: Long): String = when {
-        daysRemaining < 0   -> "Expired ${-daysRemaining} day(s) ago"
+        daysRemaining < 0   -> "Expired ${abs(daysRemaining)} day(s) ago"
         daysRemaining == 0L -> "Expires today!"
         daysRemaining == 1L -> "Expires tomorrow!"
         else                -> "Expires in $daysRemaining days"

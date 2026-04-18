@@ -32,6 +32,9 @@ object NotificationHelper {
     private const val CHANNEL_DESC_EXPIRY   = "Alerts for food items nearing their expiry date"
     private const val CHANNEL_DESC_EXPIRED  = "Alerts for food items that have already expired"
 
+    // ENHANCEMENT: Grouping key so notifications don't clutter the user's phone
+    private const val GROUP_KEY_EXPIRY = "my.edu.utar.freshtrackai.EXPIRY_ALERTS"
+
     // Notification IDs
     private const val NOTIF_ID_CRITICAL = 1001
     private const val NOTIF_ID_WATCH    = 1002
@@ -180,6 +183,7 @@ object NotificationHelper {
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setPriority(priority)
+            .setGroup(GROUP_KEY_EXPIRY) // ENHANCEMENT: Groups notifications together professionally
             .setAutoCancel(true)
             .apply { pendingIntent?.let { setContentIntent(it) } }
             .build()
@@ -193,7 +197,3 @@ object NotificationHelper {
         }
     }
 }
-
-
-
-

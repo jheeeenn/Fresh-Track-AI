@@ -192,8 +192,24 @@ object ShelfLifeRules {
     /**
      * Convenience: given just a food name, return its estimated shelf-life in days.
      */
-    fun getShelfLifeByName(itemName: String): Int {
-        val category = detectCategory(itemName)
+    suspend fun detectCategoryWithAI(itemName: String): FoodCategory {
+        // Step 1: Try the fast local check
+        val localResult = detectCategoryLocally(itemName)
+
+        // Step 2: If we successfully found it locally, return it immediately
+        if (localResult != FoodCategory.OTHER) {
+            return localResult
+        }
+
+        // Step 3: Local check failed (it's "OTHER"). Let's ask the AI!
+        return AiCategorizer.categorize(itemName)
+    }
+
+    /**
+     * Convenience function: Now uses AI to estimate shelf life.
+     */
+    suspend fun getShelfLifeByNameAI(itemName: String): Int {
+        val category = detectCategoryWithAI(itemName)
         return getShelfLifeDays(category)
     }
 }
