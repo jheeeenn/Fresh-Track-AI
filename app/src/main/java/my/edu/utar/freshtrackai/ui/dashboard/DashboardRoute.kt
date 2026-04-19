@@ -28,6 +28,8 @@ import kotlinx.coroutines.launch
 import my.edu.utar.freshtrackai.ai.ReceiptOcrProvider
 import my.edu.utar.freshtrackai.ai.ReceiptReviewMapper
 import my.edu.utar.freshtrackai.ai.ScanCaptureBitmapResolver
+import my.edu.utar.freshtrackai.ai.FoodExtractorProvider
+import my.edu.utar.freshtrackai.ai.FoodReviewMapper
 
 @Composable
 fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
@@ -149,10 +151,27 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                             }
                         }
                     } else {
-                        android.util.Log.d("RECEIPT_FLOW", "Non-receipt branch hit, using seedReviewItems()")
-                        reviewItems.clear()
-                        reviewItems.addAll(seedReviewItems())
-                        screen = WiseScreen.ItemReview
+                        android.util.Log.d("FOOD_FLOW", "Mode = $mode, captures = ${captures.size}")
+                        scope.launch {
+                            try {
+                                val bitmap = ScanCaptureBitmapResolver.resolve(context, captures.first())
+                                val parsed = FoodExtractorProvider.get(context).detectFood(bitmap)
+                                android.util.Log.d("FOOD_FLOW", "Parsed item count = ${parsed.items.size}")
+                                android.util.Log.d("FOOD_FLOW", "Parsed items = ${parsed.items}")
+
+                                val mapped = FoodReviewMapper.map(parsed)
+                                android.util.Log.d("FOOD_FLOW", "Mapped review count = ${mapped.size}")
+                                android.util.Log.d("FOOD_FLOW", "Mapped review items = ${mapped.map { it.name }}")
+
+                                reviewItems.clear()
+                                reviewItems.addAll(mapped)
+
+                                toastMessage = "Detected ${mapped.size} food item(s)."
+                                screen = WiseScreen.ItemReview
+                            } catch (e: Exception) {
+                                toastMessage = e.message ?: "Failed to scan food image."
+                            }
+                        }
                     }
                 },
                 onTabSelected = toRootTab
