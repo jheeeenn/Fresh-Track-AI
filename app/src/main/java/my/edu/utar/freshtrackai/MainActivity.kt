@@ -14,7 +14,6 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
-import my.edu.utar.freshtrackai.ai.GemmaSmokeTest
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
