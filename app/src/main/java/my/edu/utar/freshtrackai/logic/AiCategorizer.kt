@@ -3,6 +3,7 @@ package my.edu.utar.freshtrackai.logic
 import com.google.ai.client.generativeai.GenerativeModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import my.edu.utar.freshtrackai.BuildConfig
 
 /**
  * AiCategorizer.kt

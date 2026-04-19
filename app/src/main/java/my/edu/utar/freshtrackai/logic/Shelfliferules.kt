@@ -194,7 +194,8 @@ object ShelfLifeRules {
      */
     suspend fun detectCategoryWithAI(itemName: String): FoodCategory {
         // Step 1: Try the fast local check
-        val localResult = detectCategoryLocally(itemName)
+        // FIX: Changed this line so it correctly points to your detectCategory function above
+        val localResult = detectCategory(itemName)
 
         // Step 2: If we successfully found it locally, return it immediately
         if (localResult != FoodCategory.OTHER) {

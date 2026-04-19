@@ -58,6 +58,38 @@ fun NotificationTestScreen() {
         lastAction = msg
     }
 
+    // FIX: Using produceState to handle the AI suspend functions without freezing the UI!
+    val milkTest by produceState<Pair<String, Boolean>?>(initialValue = null) {
+        val r = ExpiryCalculator.calculateByName(LocalDate.now().minusDays(5), "milk")
+        value = "${r.daysRemaining} days → ${r.status}" to (r.status == ExpiryCalculator.ExpiryStatus.CRITICAL)
+    }
+
+    val breadTest by produceState<Pair<String, Boolean>?>(initialValue = null) {
+        val r = ExpiryCalculator.calculateByName(LocalDate.now().minusDays(1), "bread")
+        value = "${r.daysRemaining} days → ${r.status}" to (r.status == ExpiryCalculator.ExpiryStatus.WATCH)
+    }
+
+    val riceTest by produceState<Pair<String, Boolean>?>(initialValue = null) {
+        val r = ExpiryCalculator.calculateByName(LocalDate.now(), "rice")
+        value = "${r.daysRemaining} days → ${r.status}" to (r.status == ExpiryCalculator.ExpiryStatus.FRESH)
+    }
+
+    val chickenTest by produceState<Pair<String, Boolean>?>(initialValue = null) {
+        val r = ExpiryCalculator.calculateByName(LocalDate.now().minusDays(5), "chicken")
+        value = "${r.daysRemaining} days → ${r.status}" to (r.status == ExpiryCalculator.ExpiryStatus.EXPIRED)
+    }
+
+    // FIX: Handling the ShelfLifeRules AI suspend functions safely
+    var shelfLifeTests by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+    LaunchedEffect(Unit) {
+        val results = listOf("milk", "eggs", "chicken", "rice", "salmon", "bread").map { food ->
+            val days = ShelfLifeRules.getShelfLifeByNameAI(food)
+            val cat  = ShelfLifeRules.detectCategoryWithAI(food)
+            food to "$days days ($cat)"
+        }
+        shelfLifeTests = results
+    }
+
     Scaffold(
         topBar = { DashboardTopBar() },
         containerColor = BgPage
@@ -78,50 +110,34 @@ fun NotificationTestScreen() {
             HorizontalDivider(color = BorderCard)
 
             // ── Section 1: Expiry Logic ───────────────────────────
-            TestSectionHeader("1. Expiry Status Logic")
+            TestSectionHeader("1. Expiry Status Logic (AI Powered)")
 
             TestResultCard(
                 title  = "Milk (added 5 days ago)",
-                result = run {
-                    val r = ExpiryCalculator.calculateByName(LocalDate.now().minusDays(5), "milk")
-                    "${r.daysRemaining} days → ${r.status}"
-                },
+                result = milkTest?.first ?: "Loading AI...",
                 expected = "~2 days → CRITICAL",
-                passed = ExpiryCalculator.calculateByName(LocalDate.now().minusDays(5), "milk")
-                    .status == ExpiryCalculator.ExpiryStatus.CRITICAL
+                passed = milkTest?.second ?: false
             )
 
             TestResultCard(
                 title  = "Bread (added 1 day ago)",
-                result = run {
-                    val r = ExpiryCalculator.calculateByName(LocalDate.now().minusDays(1), "bread")
-                    "${r.daysRemaining} days → ${r.status}"
-                },
+                result = breadTest?.first ?: "Loading AI...",
                 expected = "~4 days → WATCH",
-                passed = ExpiryCalculator.calculateByName(LocalDate.now().minusDays(1), "bread")
-                    .status == ExpiryCalculator.ExpiryStatus.WATCH
+                passed = breadTest?.second ?: false
             )
 
             TestResultCard(
                 title  = "Rice (added today)",
-                result = run {
-                    val r = ExpiryCalculator.calculateByName(LocalDate.now(), "rice")
-                    "${r.daysRemaining} days → ${r.status}"
-                },
+                result = riceTest?.first ?: "Loading AI...",
                 expected = "365 days → FRESH",
-                passed = ExpiryCalculator.calculateByName(LocalDate.now(), "rice")
-                    .status == ExpiryCalculator.ExpiryStatus.FRESH
+                passed = riceTest?.second ?: false
             )
 
             TestResultCard(
                 title  = "Chicken (added 5 days ago)",
-                result = run {
-                    val r = ExpiryCalculator.calculateByName(LocalDate.now().minusDays(5), "chicken")
-                    "${r.daysRemaining} days → ${r.status}"
-                },
+                result = chickenTest?.first ?: "Loading AI...",
                 expected = "-2 days → EXPIRED",
-                passed = ExpiryCalculator.calculateByName(LocalDate.now().minusDays(5), "chicken")
-                    .status == ExpiryCalculator.ExpiryStatus.EXPIRED
+                passed = chickenTest?.second ?: false
             )
 
             // ── Section 2: Date Parsing Bug Fix ──────────────────
@@ -147,10 +163,12 @@ fun NotificationTestScreen() {
             // ── Section 3: Shelf-life Rules ───────────────────────
             TestSectionHeader("3. Shelf-Life Rule Mapping")
 
-            listOf("milk", "eggs", "chicken", "rice", "salmon", "bread").forEach { food ->
-                val days = ShelfLifeRules.getShelfLifeByName(food)
-                val cat  = ShelfLifeRules.detectCategory(food)
-                TestInfoRow("$food", "$days days ($cat)")
+            if (shelfLifeTests.isEmpty()) {
+                TestInfoRow("Loading...", "AI is processing...")
+            } else {
+                shelfLifeTests.forEach { (food, info) ->
+                    TestInfoRow(food, info)
+                }
             }
 
             // ── Section 4: Push Notifications ────────────────────

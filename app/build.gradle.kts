@@ -16,15 +16,16 @@ if (localPropertiesFile.exists()) {
 android {
     namespace = "my.edu.utar.freshtrackai"
 
-    // The correct AGP 9.0+ syntax for your specific project
+    // FIX: Bumped to 36 to satisfy the new AndroidX dependencies!
     compileSdk {
-        version = release(34)
+        version = release(36)
     }
 
     defaultConfig {
         applicationId = "my.edu.utar.freshtrackai"
         minSdk = 26
-        targetSdk = 34
+        // FIX: Bumped to 36 to match the compileSdk
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 

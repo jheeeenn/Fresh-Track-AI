@@ -25,9 +25,9 @@ import java.util.concurrent.TimeUnit
 class ExpiryCheckWorker(
     private val context: Context,
     workerParams: WorkerParameters
-) : Worker(context, workerParams) {
+) : CoroutineWorker(context, workerParams) {
 
-    override fun doWork(): Result {
+    override suspend fun doWork(): Result { // <--- ADD 'suspend' HERE
         return try {
             // ── Step 1: Load inventory from database ──────────────────
             // TODO (Member 2 integration): Replace this with a real DB call.

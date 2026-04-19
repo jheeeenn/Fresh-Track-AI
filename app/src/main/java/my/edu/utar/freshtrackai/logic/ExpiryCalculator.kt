@@ -95,8 +95,9 @@ object ExpiryCalculator {
      * Estimates the expiry date based on [dateAdded] and the food [itemName].
      * Auto-detects category from item name via ShelfLifeRules.
      */
-    fun estimateExpiryDateByName(dateAdded: LocalDate, itemName: String): LocalDate {
-        val shelfDays = ShelfLifeRules.getShelfLifeByName(itemName)
+    // UPDATED: Added 'suspend' and changed to getShelfLifeByNameAI
+    suspend fun estimateExpiryDateByName(dateAdded: LocalDate, itemName: String): LocalDate {
+        val shelfDays = ShelfLifeRules.getShelfLifeByNameAI(itemName)
         return dateAdded.plusDays(shelfDays.toLong())
     }
 
@@ -136,7 +137,8 @@ object ExpiryCalculator {
     /**
      * Full calculation for items WITHOUT a manufacturer expiry date.
      */
-    fun calculateByName(dateAdded: LocalDate, itemName: String): ExpiryResult {
+    // UPDATED: Added 'suspend' because it relies on the AI function
+    suspend fun calculateByName(dateAdded: LocalDate, itemName: String): ExpiryResult {
         val expiryDate = estimateExpiryDateByName(dateAdded, itemName)
         return calculate(expiryDate)
     }
