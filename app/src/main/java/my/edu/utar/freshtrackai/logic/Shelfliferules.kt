@@ -193,24 +193,33 @@ object ShelfLifeRules {
      * Convenience: given just a food name, return its estimated shelf-life in days.
      */
     suspend fun detectCategoryWithAI(itemName: String): FoodCategory {
-        // Step 1: Try the fast local check
-        // FIX: Changed this line so it correctly points to your detectCategory function above
         val localResult = detectCategory(itemName)
-
-        // Step 2: If we successfully found it locally, return it immediately
         if (localResult != FoodCategory.OTHER) {
             return localResult
         }
-
-        // Step 3: Local check failed (it's "OTHER"). Let's ask the AI!
+        // Assuming your AiCategorizer still has categorize() for fallback/other uses
         return AiCategorizer.categorize(itemName)
     }
 
     /**
-     * Convenience function: Now uses AI to estimate shelf life.
+     * UPDATED: Now asks the AI for the exact number of days.
+     * Uses the dropdown category as a safe offline fallback.
      */
-    suspend fun getShelfLifeByNameAI(itemName: String): Int {
-        val category = detectCategoryWithAI(itemName)
-        return getShelfLifeDays(category)
+    suspend fun getShelfLifeByNameAI(itemName: String, fallbackCategory: FoodCategory = FoodCategory.OTHER): Int {
+        // 1. Check our fast offline map first
+        val localCategory = detectCategory(itemName)
+        if (localCategory != FoodCategory.OTHER) {
+            return getShelfLifeDays(localCategory)
+        }
+
+        // 2. If unknown, ask the AI for the exact number of days
+        val aiDays = AiCategorizer.getEstimatedDays(itemName)
+
+        // 3. If AI gives a valid number, use it. If offline/error, use the dropdown category!
+        if (aiDays > 0) {
+            return aiDays
+        }
+
+        return getShelfLifeDays(fallbackCategory)
     }
 }

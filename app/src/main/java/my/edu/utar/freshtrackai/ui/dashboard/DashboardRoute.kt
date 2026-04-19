@@ -10,6 +10,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+// ---> FIX: Added rememberCoroutineScope import here <---
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -17,10 +19,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import java.util.UUID
 import kotlinx.coroutines.delay
+// ---> FIX: Added launch import here <---
+import kotlinx.coroutines.launch
 import my.edu.utar.freshtrackai.ui.theme.FreshTrackAITheme
 
 @Composable
 fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
+    // ---> FIX: Created the coroutine scope so we can call the AI safely <---
+    val coroutineScope = rememberCoroutineScope()
+
     var screen by rememberSaveable { mutableStateOf(WiseScreen.AppLauncher) }
     val inventory = remember { mutableStateListOf<InventoryItem>().apply { addAll(seedInventoryItems()) } }
     val reviewItems = remember { mutableStateListOf<ReviewItemUi>().apply { addAll(seedReviewItems()) } }
@@ -125,46 +132,49 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                 isEditMode = editingReviewItemId != null || editingInventoryItemId != null,
                 onDraftChange = { addFormDraft = it },
                 onSubmit = {
-                    when (addItemOrigin) {
-                        AddItemOrigin.ItemReview -> {
-                            val existing = reviewItems.firstOrNull { it.id == editingReviewItemId }
-                            val next = draftToReviewItem(
-                                draft = addFormDraft,
-                                existing = existing,
-                                forcedId = editingReviewItemId
-                            )
-                            val existingIndex = reviewItems.indexOfFirst { it.id == next.id }
-                            if (existingIndex >= 0) {
-                                reviewItems[existingIndex] = next
-                                toastMessage = "Scanned item updated."
-                            } else {
-                                reviewItems.add(next)
-                                toastMessage = "Missing item added."
-                            }
-                            addFormDraft = AddItemFormDraft()
-                            editingReviewItemId = null
-                            screen = WiseScreen.ItemReview
-                        }
-                        AddItemOrigin.Dashboard -> {
-                            if (editingInventoryItemId != null) {
-                                val idx = inventory.indexOfFirst { it.id == editingInventoryItemId }
-                                if (idx >= 0) {
-                                    val updated = draftToInventoryItem(addFormDraft).copy(
-                                        id = editingInventoryItemId!!,
-                                        addedDaysAgo = inventory[idx].addedDaysAgo
-                                    )
-                                    inventory[idx] = updated
-                                    toastMessage = "Food details updated."
+                    // ---> FIX: Wrapped the saving logic inside a coroutine launch block! <---
+                    coroutineScope.launch {
+                        when (addItemOrigin) {
+                            AddItemOrigin.ItemReview -> {
+                                val existing = reviewItems.firstOrNull { it.id == editingReviewItemId }
+                                val next = draftToReviewItem(
+                                    draft = addFormDraft,
+                                    existing = existing,
+                                    forcedId = editingReviewItemId
+                                )
+                                val existingIndex = reviewItems.indexOfFirst { it.id == next.id }
+                                if (existingIndex >= 0) {
+                                    reviewItems[existingIndex] = next
+                                    toastMessage = "Scanned item updated."
+                                } else {
+                                    reviewItems.add(next)
+                                    toastMessage = "Missing item added."
                                 }
-                            } else {
-                                inventory.add(draftToInventoryItem(addFormDraft))
-                                toastMessage = "Item added to inventory."
+                                addFormDraft = AddItemFormDraft()
+                                editingReviewItemId = null
+                                screen = WiseScreen.ItemReview
                             }
-                            addFormDraft = AddItemFormDraft()
-                            editingInventoryItemId = null
-                            screen = WiseScreen.MainDashboard
+                            AddItemOrigin.Dashboard -> {
+                                if (editingInventoryItemId != null) {
+                                    val idx = inventory.indexOfFirst { it.id == editingInventoryItemId }
+                                    if (idx >= 0) {
+                                        val updated = draftToInventoryItem(addFormDraft).copy(
+                                            id = editingInventoryItemId!!,
+                                            addedDaysAgo = inventory[idx].addedDaysAgo
+                                        )
+                                        inventory[idx] = updated
+                                        toastMessage = "Food details updated."
+                                    }
+                                } else {
+                                    inventory.add(draftToInventoryItem(addFormDraft))
+                                    toastMessage = "Item added to inventory."
+                                }
+                                addFormDraft = AddItemFormDraft()
+                                editingInventoryItemId = null
+                                screen = WiseScreen.MainDashboard
+                            }
                         }
-                    }
+                    } // ---> FIX: End of coroutine launch block <---
                 },
                 onBack = {
                     screen = if (addItemOrigin == AddItemOrigin.ItemReview) {

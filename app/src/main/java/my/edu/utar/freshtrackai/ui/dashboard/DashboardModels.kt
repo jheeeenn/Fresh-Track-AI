@@ -4,15 +4,26 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.ui.graphics.Color
 
+// ─────────────────────────────────────────────────────────────
+// FIX: Aligned UI Categories with Member 3's ShelfLifeRules.kt
+// Now both the UI and Backend have the exact same 15 categories!
+// ─────────────────────────────────────────────────────────────
 internal enum class InventoryCategory(val label: String) {
-    Produce("Produce"),
     Dairy("Dairy"),
-    MeatProtein("Meat & Protein"),
-    Beverages("Beverages"),
-    PantryDryGoods("Pantry & Dry Goods"),
-    Frozen("Frozen"),
+    Eggs("Eggs"),
+    MeatPoultry("Meat & Poultry"),
+    Seafood("Seafood"),
+    Fruits("Fruits"),
+    Vegetables("Vegetables"),
     Bakery("Bakery"),
-    CondimentsSauces("Condiments & Sauces")
+    GrainsPasta("Grains & Pasta"),
+    CannedGoods("Canned Goods"),
+    Frozen("Frozen"),
+    Beverages("Beverages"),
+    Condiments("Condiments & Sauces"),
+    Snacks("Snacks"),
+    Leftovers("Leftovers"),
+    Other("Other")
 }
 
 internal enum class ExpiryBadge(val label: String, val textColor: Color, val bgColor: Color) {
@@ -60,7 +71,8 @@ internal enum class AddItemOrigin {
 internal data class AddItemFormDraft(
     val name: String = "",
     val quantity: String = "",
-    val category: InventoryCategory = InventoryCategory.Produce,
+    // FIX: Updated the default category from 'Produce' to 'Vegetables' to match the new enum
+    val category: InventoryCategory = InventoryCategory.Vegetables,
     val expiryDate: String = "",
     val nutritionNotes: String = ""
 )
@@ -110,4 +122,3 @@ internal sealed class ScanCapture(val id: String) {
     class Camera(id: String, val bitmap: Bitmap) : ScanCapture(id)
     class Gallery(id: String, val uri: Uri) : ScanCapture(id)
 }
-
