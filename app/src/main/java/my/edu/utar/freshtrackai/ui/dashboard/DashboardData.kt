@@ -151,7 +151,30 @@ internal fun ReviewItemUi.toDraft(): AddItemFormDraft = AddItemFormDraft(
 )
 
 // ─────────────────────────────────────────────────────────────
-// UPDATED: Now a suspend function that asks AI for days
+// NEW FIX: Tells the UI whether we actually need to call the AI
+// ─────────────────────────────────────────────────────────────
+internal fun requiresAiCheck(draft: AddItemFormDraft, existing: ReviewItemUi? = null): Boolean {
+    val resolvedLabel = draft.expiryDate.trim().ifBlank { existing?.expiresLabel ?: "Not set" }
+
+    // 1. If user typed a date (or didn't change the existing date), we don't need AI
+    if (existing != null && resolvedLabel == existing.expiresLabel) return false
+    if (resolvedLabel != "Not set" && resolvedLabel.isNotBlank()) return false
+
+    // 2. If it perfectly matches our offline dictionary, we don't need AI
+    val resolvedName = draft.name.trim().ifBlank { "Unnamed Item" }
+    val localCategory = my.edu.utar.freshtrackai.logic.ShelfLifeRules.detectCategory(resolvedName)
+    val selectedCategory = draft.category.toLogicCategory()
+
+    if (localCategory == selectedCategory && localCategory != my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.OTHER) {
+        return false // Instant offline match!
+    }
+
+    // 3. Otherwise, we MUST wake up the AI!
+    return true
+}
+
+// ─────────────────────────────────────────────────────────────
+// UPDATED: Now a suspend function that asks AI for exact days!
 // ─────────────────────────────────────────────────────────────
 internal suspend fun draftToReviewItem(
     draft: AddItemFormDraft,
@@ -167,7 +190,7 @@ internal suspend fun draftToReviewItem(
         existing != null && resolvedLabel == existing.expiresLabel -> existing.expiresInDays
         resolvedLabel == "Not set" || resolvedLabel.isBlank() ->
             // 1. Asks AI for exact days based on the name.
-            // 2. Passes the selected Dropdown Category as a safe offline fallback.
+            // 2. Passes the selected Dropdown Category as context and fallback.
             my.edu.utar.freshtrackai.logic.ShelfLifeRules.getShelfLifeByNameAI(
                 resolvedName, finalCategory.toLogicCategory()
             )
@@ -187,7 +210,7 @@ internal suspend fun draftToReviewItem(
 }
 
 // ─────────────────────────────────────────────────────────────
-// UPDATED: Now a suspend function that asks AI for days
+// UPDATED: Now a suspend function that asks AI for exact days!
 // ─────────────────────────────────────────────────────────────
 internal suspend fun draftToInventoryItem(draft: AddItemFormDraft): InventoryItem {
     val resolvedName = draft.name.trim().ifBlank { "Unnamed Item" }
@@ -195,7 +218,7 @@ internal suspend fun draftToInventoryItem(draft: AddItemFormDraft): InventoryIte
 
     val resolvedDays = if (draft.expiryDate.isBlank() || draft.expiryDate == "Not set") {
         // 1. Asks AI for exact days based on the name.
-        // 2. Passes the selected Dropdown Category as a safe offline fallback.
+        // 2. Passes the selected Dropdown Category as context and fallback.
         my.edu.utar.freshtrackai.logic.ShelfLifeRules.getShelfLifeByNameAI(
             resolvedName, finalCategory.toLogicCategory()
         )

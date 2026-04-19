@@ -2,31 +2,42 @@
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-// ---> FIX: Added rememberCoroutineScope import here <---
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import java.util.UUID
 import kotlinx.coroutines.delay
-// ---> FIX: Added launch import here <---
 import kotlinx.coroutines.launch
 import my.edu.utar.freshtrackai.ui.theme.FreshTrackAITheme
 
 @Composable
 fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
-    // ---> FIX: Created the coroutine scope so we can call the AI safely <---
     val coroutineScope = rememberCoroutineScope()
+    var isSaving by remember { mutableStateOf(false) }
 
     var screen by rememberSaveable { mutableStateOf(WiseScreen.AppLauncher) }
     val inventory = remember { mutableStateListOf<InventoryItem>().apply { addAll(seedInventoryItems()) } }
@@ -132,49 +143,64 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                 isEditMode = editingReviewItemId != null || editingInventoryItemId != null,
                 onDraftChange = { addFormDraft = it },
                 onSubmit = {
-                    // ---> FIX: Wrapped the saving logic inside a coroutine launch block! <---
                     coroutineScope.launch {
-                        when (addItemOrigin) {
-                            AddItemOrigin.ItemReview -> {
-                                val existing = reviewItems.firstOrNull { it.id == editingReviewItemId }
-                                val next = draftToReviewItem(
-                                    draft = addFormDraft,
-                                    existing = existing,
-                                    forcedId = editingReviewItemId
-                                )
-                                val existingIndex = reviewItems.indexOfFirst { it.id == next.id }
-                                if (existingIndex >= 0) {
-                                    reviewItems[existingIndex] = next
-                                    toastMessage = "Scanned item updated."
-                                } else {
-                                    reviewItems.add(next)
-                                    toastMessage = "Missing item added."
-                                }
-                                addFormDraft = AddItemFormDraft()
-                                editingReviewItemId = null
-                                screen = WiseScreen.ItemReview
-                            }
-                            AddItemOrigin.Dashboard -> {
-                                if (editingInventoryItemId != null) {
-                                    val idx = inventory.indexOfFirst { it.id == editingInventoryItemId }
-                                    if (idx >= 0) {
-                                        val updated = draftToInventoryItem(addFormDraft).copy(
-                                            id = editingInventoryItemId!!,
-                                            addedDaysAgo = inventory[idx].addedDaysAgo
-                                        )
-                                        inventory[idx] = updated
-                                        toastMessage = "Food details updated."
-                                    }
-                                } else {
-                                    inventory.add(draftToInventoryItem(addFormDraft))
-                                    toastMessage = "Item added to inventory."
-                                }
-                                addFormDraft = AddItemFormDraft()
-                                editingInventoryItemId = null
-                                screen = WiseScreen.MainDashboard
-                            }
+
+                        // ─────────────────────────────────────────────────────────────
+                        // NEW FIX: Only show loading window if AI is ACTUALLY needed!
+                        // ─────────────────────────────────────────────────────────────
+                        val existingItem = if (addItemOrigin == AddItemOrigin.ItemReview) {
+                            reviewItems.firstOrNull { it.id == editingReviewItemId }
+                        } else null
+
+                        if (requiresAiCheck(addFormDraft, existingItem)) {
+                            isSaving = true
                         }
-                    } // ---> FIX: End of coroutine launch block <---
+
+                        try {
+                            when (addItemOrigin) {
+                                AddItemOrigin.ItemReview -> {
+                                    val existing = reviewItems.firstOrNull { it.id == editingReviewItemId }
+                                    val next = draftToReviewItem(
+                                        draft = addFormDraft,
+                                        existing = existing,
+                                        forcedId = editingReviewItemId
+                                    )
+                                    val existingIndex = reviewItems.indexOfFirst { it.id == next.id }
+                                    if (existingIndex >= 0) {
+                                        reviewItems[existingIndex] = next
+                                        toastMessage = "Scanned item updated."
+                                    } else {
+                                        reviewItems.add(next)
+                                        toastMessage = "Missing item added."
+                                    }
+                                    addFormDraft = AddItemFormDraft()
+                                    editingReviewItemId = null
+                                    screen = WiseScreen.ItemReview
+                                }
+                                AddItemOrigin.Dashboard -> {
+                                    if (editingInventoryItemId != null) {
+                                        val idx = inventory.indexOfFirst { it.id == editingInventoryItemId }
+                                        if (idx >= 0) {
+                                            val updated = draftToInventoryItem(addFormDraft).copy(
+                                                id = editingInventoryItemId!!,
+                                                addedDaysAgo = inventory[idx].addedDaysAgo
+                                            )
+                                            inventory[idx] = updated
+                                            toastMessage = "Food details updated."
+                                        }
+                                    } else {
+                                        inventory.add(draftToInventoryItem(addFormDraft))
+                                        toastMessage = "Item added to inventory."
+                                    }
+                                    addFormDraft = AddItemFormDraft()
+                                    editingInventoryItemId = null
+                                    screen = WiseScreen.MainDashboard
+                                }
+                            }
+                        } finally {
+                            isSaving = false
+                        }
+                    }
                 },
                 onBack = {
                     screen = if (addItemOrigin == AddItemOrigin.ItemReview) {
@@ -299,6 +325,34 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                 },
                 onTabSelected = toRootTab
             )
+        }
+
+        if (isSaving) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(24.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        CircularProgressIndicator(color = Color(0xFF14532D))
+                        Text(
+                            text = "Gemini AI is analyzing...",
+                            color = Color.Black,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
         }
     }
 

@@ -202,24 +202,28 @@ object ShelfLifeRules {
     }
 
     /**
-     * UPDATED: Now asks the AI for the exact number of days.
-     * Uses the dropdown category as a safe offline fallback.
+     * UPDATED: Implements the exact context-aware flow.
+     * 1. Check if name matches locally AND matches the selected category.
+     * 2. If no, ask AI and provide the selected category.
+     * 3. Fallback to standard days if offline.
      */
-    suspend fun getShelfLifeByNameAI(itemName: String, fallbackCategory: FoodCategory = FoodCategory.OTHER): Int {
-        // 1. Check our fast offline map first
+    suspend fun getShelfLifeByNameAI(itemName: String, selectedCategory: FoodCategory = FoodCategory.OTHER): Int {
+        // Step 1: Check if the item name exists locally AND matches the user's dropdown category
         val localCategory = detectCategory(itemName)
-        if (localCategory != FoodCategory.OTHER) {
+        if (localCategory == selectedCategory && localCategory != FoodCategory.OTHER) {
+            // It's in the local list and belongs to the correct category. Instant offline return!
             return getShelfLifeDays(localCategory)
         }
 
-        // 2. If unknown, ask the AI for the exact number of days
-        val aiDays = AiCategorizer.getEstimatedDays(itemName)
+        // Step 2: If no local match inside this category, ask AI and TELL it the category!
+        val aiDays = AiCategorizer.getEstimatedDays(itemName, selectedCategory.name)
 
-        // 3. If AI gives a valid number, use it. If offline/error, use the dropdown category!
+        // Step 3: If AI gives a valid number, use it.
         if (aiDays > 0) {
             return aiDays
         }
 
-        return getShelfLifeDays(fallbackCategory)
+        // Step 4: If no internet (AI fails), fallback to the standard expiry for that specific category
+        return getShelfLifeDays(selectedCategory)
     }
 }
