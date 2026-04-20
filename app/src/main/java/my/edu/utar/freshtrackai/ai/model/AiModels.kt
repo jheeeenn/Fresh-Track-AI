@@ -1,19 +1,24 @@
 package my.edu.utar.freshtrackai.ai.model
 
-// app-side AI result models.
+import com.google.gson.annotations.SerializedName
+
+// ─── Recipe suggestion models ─────────────────────────────────────────────────
+// Note: FoodDetectionResult/FoodItemDto are in FoodDetectionResult.kt
+// Note: ReceiptItemDto/ReceiptParseResult are in ReceiptParseModels.kt
+
 data class RecipeIngredientDto(
-    val name: String,
-    val quantity: String? = null
+    @SerializedName("name")     val name: String = "",
+    @SerializedName("quantity") val quantity: String? = null
 )
 
 data class RecipeDto(
-    val title: String,
-    val description: String? = null,
-    val availableIngredients: List<RecipeIngredientDto> = emptyList(),
-    val missingIngredients: List<RecipeIngredientDto> = emptyList(),
-    val instructions: List<String> = emptyList()
+    @SerializedName("title")                val title: String = "",
+    @SerializedName("description")          val description: String? = null,
+    @SerializedName("availableIngredients") val availableIngredients: List<RecipeIngredientDto> = emptyList(),
+    @SerializedName("missingIngredients")   val missingIngredients: List<RecipeIngredientDto> = emptyList(),
+    @SerializedName("instructions")         val instructions: List<String> = emptyList()
 )
 
 data class RecipeSuggestionResult(
-    val recipes: List<RecipeDto> = emptyList()
+    @SerializedName("recipes") val recipes: List<RecipeDto> = emptyList()
 )

@@ -6,16 +6,17 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 val localProperties = Properties().apply {
-    load(FileInputStream(rootProject.file("local.properties")))
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        load(FileInputStream(localPropertiesFile))
+    }
 }
 
 val geminiApiKey = localProperties.getProperty("GEMINI_API_KEY", "")
 
 android {
     namespace = "my.edu.utar.freshtrackai"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36 // FIXED SYNTAX HERE
 
     defaultConfig {
         applicationId = "my.edu.utar.freshtrackai"
@@ -38,6 +39,8 @@ android {
         }
     }
     compileOptions {
+        // ADDED TO SUPPORT java.time ON API 24
+        //coreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -48,6 +51,9 @@ android {
 }
 
 dependencies {
+    // ADDED DESUGARING DEPENDENCY FOR java.time
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

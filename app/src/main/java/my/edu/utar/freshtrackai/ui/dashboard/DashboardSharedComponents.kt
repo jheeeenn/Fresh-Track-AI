@@ -1,18 +1,8 @@
 ﻿package my.edu.utar.freshtrackai.ui.dashboard
 
-// --- NEW IMPORTS ADDED HERE TO FIX THE ERRORS ---
-import androidx.compose.ui.graphics.Color.Companion.White
-import my.edu.utar.freshtrackai.ui.theme.Emerald
-import my.edu.utar.freshtrackai.ui.theme.Gray50
-import my.edu.utar.freshtrackai.ui.theme.Gray100
-import my.edu.utar.freshtrackai.ui.theme.Gray200
-import my.edu.utar.freshtrackai.ui.theme.Slate600
-import my.edu.utar.freshtrackai.ui.theme.Slate900
-// ------------------------------------------------
-
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,7 +11,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -52,11 +41,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -105,9 +91,12 @@ internal fun DraggableAddFab(onClick: () -> Unit, modifier: Modifier = Modifier)
             .padding(bottom = bottomOffset)
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val totalWidthPx = constraints.maxWidth.toFloat()
-            val fabSizePx = with(androidx.compose.ui.platform.LocalDensity.current) { fabSize.toPx() }
-            val sideMarginPx = with(androidx.compose.ui.platform.LocalDensity.current) { sideMargin.toPx() }
+
+            // FIX IS HERE: Use maxWidth.toPx() instead of constraints.maxWidth
+            val totalWidthPx = with(LocalDensity.current) { maxWidth.toPx() }
+
+            val fabSizePx = with(LocalDensity.current) { fabSize.toPx() }
+            val sideMarginPx = with(LocalDensity.current) { sideMargin.toPx() }
             val minX = sideMarginPx
             val maxX = (totalWidthPx - fabSizePx - sideMarginPx).coerceAtLeast(minX)
 

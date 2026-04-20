@@ -2,6 +2,8 @@
 
 import androidx.compose.ui.graphics.Color
 import java.util.UUID
+import my.edu.utar.freshtrackai.logic.ExpiryCalculator
+import my.edu.utar.freshtrackai.logic.ShelfLifeRules
 
 internal fun InventoryItem.toExpiringOrNull(): ExpiringItem? {
     val badge = urgencyForDays(expiresInDays) ?: return null
@@ -16,12 +18,12 @@ internal fun InventoryItem.toExpiringOrNull(): ExpiringItem? {
 }
 
 internal fun urgencyForDays(days: Int): ExpiryBadge? {
-    val status = my.edu.utar.freshtrackai.logic.`ExpiryCalculator`.getExpiryStatus(days.toLong())
+    val status = ExpiryCalculator.getExpiryStatus(days.toLong())
 
     return when (status) {
-        my.edu.utar.freshtrackai.logic.`ExpiryCalculator`.ExpiryStatus.EXPIRED -> ExpiryBadge.Critical
-        my.edu.utar.freshtrackai.logic.`ExpiryCalculator`.ExpiryStatus.CRITICAL -> ExpiryBadge.Critical
-        my.edu.utar.freshtrackai.logic.`ExpiryCalculator`.ExpiryStatus.WATCH -> ExpiryBadge.Watch
+        ExpiryCalculator.ExpiryStatus.EXPIRED -> ExpiryBadge.Critical
+        ExpiryCalculator.ExpiryStatus.CRITICAL -> ExpiryBadge.Critical
+        ExpiryCalculator.ExpiryStatus.WATCH -> ExpiryBadge.Watch
         else -> null
     }
 }
@@ -49,23 +51,23 @@ internal fun categoryEmoji(category: InventoryCategory): String = when (category
 // ─────────────────────────────────────────────────────────────
 // SAFE MAPPER: UI Dropdown -> Logic Enums
 // ─────────────────────────────────────────────────────────────
-internal fun InventoryCategory.toLogicCategory(): my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory {
+internal fun InventoryCategory.toLogicCategory(): ShelfLifeRules.FoodCategory {
     return when(this) {
-        InventoryCategory.Dairy -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.DAIRY
-        InventoryCategory.Eggs -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.EGGS
-        InventoryCategory.MeatPoultry -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.MEAT_POULTRY
-        InventoryCategory.Seafood -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.SEAFOOD
-        InventoryCategory.Fruits -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.FRUITS
-        InventoryCategory.Vegetables -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.VEGETABLES
-        InventoryCategory.Bakery -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.BAKERY
-        InventoryCategory.GrainsPasta -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.GRAINS_PASTA
-        InventoryCategory.CannedGoods -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.CANNED_GOODS
-        InventoryCategory.Frozen -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.FROZEN
-        InventoryCategory.Beverages -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.BEVERAGES
-        InventoryCategory.Condiments -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.CONDIMENTS
-        InventoryCategory.Snacks -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.SNACKS
-        InventoryCategory.Leftovers -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.LEFTOVERS
-        InventoryCategory.Other -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.OTHER
+        InventoryCategory.Dairy -> ShelfLifeRules.FoodCategory.DAIRY
+        InventoryCategory.Eggs -> ShelfLifeRules.FoodCategory.EGGS
+        InventoryCategory.MeatPoultry -> ShelfLifeRules.FoodCategory.MEAT_POULTRY
+        InventoryCategory.Seafood -> ShelfLifeRules.FoodCategory.SEAFOOD
+        InventoryCategory.Fruits -> ShelfLifeRules.FoodCategory.FRUITS
+        InventoryCategory.Vegetables -> ShelfLifeRules.FoodCategory.VEGETABLES
+        InventoryCategory.Bakery -> ShelfLifeRules.FoodCategory.BAKERY
+        InventoryCategory.GrainsPasta -> ShelfLifeRules.FoodCategory.GRAINS_PASTA
+        InventoryCategory.CannedGoods -> ShelfLifeRules.FoodCategory.CANNED_GOODS
+        InventoryCategory.Frozen -> ShelfLifeRules.FoodCategory.FROZEN
+        InventoryCategory.Beverages -> ShelfLifeRules.FoodCategory.BEVERAGES
+        InventoryCategory.Condiments -> ShelfLifeRules.FoodCategory.CONDIMENTS
+        InventoryCategory.Snacks -> ShelfLifeRules.FoodCategory.SNACKS
+        InventoryCategory.Leftovers -> ShelfLifeRules.FoodCategory.LEFTOVERS
+        InventoryCategory.Other -> ShelfLifeRules.FoodCategory.OTHER
     }
 }
 
@@ -162,10 +164,10 @@ internal fun requiresAiCheck(draft: AddItemFormDraft, existing: ReviewItemUi? = 
 
     // 2. If it perfectly matches our offline dictionary, we don't need AI
     val resolvedName = draft.name.trim().ifBlank { "Unnamed Item" }
-    val localCategory = my.edu.utar.freshtrackai.logic.ShelfLifeRules.detectCategory(resolvedName)
+    val localCategory = ShelfLifeRules.detectCategory(resolvedName)
     val selectedCategory = draft.category.toLogicCategory()
 
-    if (localCategory == selectedCategory && localCategory != my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.OTHER) {
+    if (localCategory == selectedCategory && localCategory != ShelfLifeRules.FoodCategory.OTHER) {
         return false // Instant offline match!
     }
 
@@ -191,10 +193,10 @@ internal suspend fun draftToReviewItem(
         resolvedLabel == "Not set" || resolvedLabel.isBlank() ->
             // 1. Asks AI for exact days based on the name.
             // 2. Passes the selected Dropdown Category as context and fallback.
-            my.edu.utar.freshtrackai.logic.ShelfLifeRules.getShelfLifeByNameAI(
+            ShelfLifeRules.getShelfLifeByNameAI(
                 resolvedName, finalCategory.toLogicCategory()
             )
-        else -> my.edu.utar.freshtrackai.logic.`ExpiryCalculator`.estimateExpiresInDays(resolvedLabel).toInt()
+        else -> ExpiryCalculator.estimateExpiresInDays(resolvedLabel).toInt()
     }
 
     return ReviewItemUi(
@@ -219,11 +221,11 @@ internal suspend fun draftToInventoryItem(draft: AddItemFormDraft): InventoryIte
     val resolvedDays = if (draft.expiryDate.isBlank() || draft.expiryDate == "Not set") {
         // 1. Asks AI for exact days based on the name.
         // 2. Passes the selected Dropdown Category as context and fallback.
-        my.edu.utar.freshtrackai.logic.ShelfLifeRules.getShelfLifeByNameAI(
+        ShelfLifeRules.getShelfLifeByNameAI(
             resolvedName, finalCategory.toLogicCategory()
         )
     } else {
-        my.edu.utar.freshtrackai.logic.`ExpiryCalculator`.estimateExpiresInDays(draft.expiryDate).toInt()
+        ExpiryCalculator.estimateExpiresInDays(draft.expiryDate).toInt()
     }
 
     return InventoryItem(
@@ -238,7 +240,7 @@ internal suspend fun draftToInventoryItem(draft: AddItemFormDraft): InventoryIte
 }
 
 internal fun estimateExpiresInDays(input: String, fallback: Int): Int {
-    return my.edu.utar.freshtrackai.logic.`ExpiryCalculator`.estimateExpiresInDays(input).toInt()
+    return ExpiryCalculator.estimateExpiresInDays(input).toInt()
 }
 
 internal fun reviewThumbBackground(ref: String): Color {

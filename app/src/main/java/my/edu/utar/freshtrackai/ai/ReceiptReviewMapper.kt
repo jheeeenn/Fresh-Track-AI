@@ -43,24 +43,40 @@ internal object ReceiptReviewMapper {
     private fun mapCategory(raw: String?): InventoryCategory {
         return when (raw?.trim()?.lowercase()) {
             "dairy" -> InventoryCategory.Dairy
-            "fruit", "vegetable", "produce" -> InventoryCategory.Produce
-            "meat", "protein" -> InventoryCategory.MeatProtein
-            "beverage", "drink" -> InventoryCategory.Beverages
-            "pantry", "snack" -> InventoryCategory.PantryDryGoods
-            else -> InventoryCategory.PantryDryGoods
+            "fruit", "fruits" -> InventoryCategory.Fruits
+            "vegetable", "vegetables", "produce" -> InventoryCategory.Vegetables
+            "meat", "poultry", "protein" -> InventoryCategory.MeatPoultry
+            "seafood" -> InventoryCategory.Seafood
+            "beverage", "beverages", "drink" -> InventoryCategory.Beverages
+            "bakery" -> InventoryCategory.Bakery
+            "snack", "snacks", "pantry" -> InventoryCategory.Snacks
+            "frozen" -> InventoryCategory.Frozen
+            "canned", "canned_goods" -> InventoryCategory.CannedGoods
+            "condiment", "condiments", "sauce" -> InventoryCategory.Condiments
+            "grains", "pasta", "grains_pasta" -> InventoryCategory.GrainsPasta
+            "leftover", "leftovers" -> InventoryCategory.Leftovers
+            "eggs", "egg" -> InventoryCategory.Eggs
+            else -> InventoryCategory.Other
         }
     }
 
     private fun estimateExpiryDays(category: InventoryCategory): Int {
         return when (category) {
             InventoryCategory.Dairy -> 5
-            InventoryCategory.Produce -> 7
-            InventoryCategory.MeatProtein -> 3
-            InventoryCategory.Beverages -> 14
-            InventoryCategory.PantryDryGoods -> 30
-            InventoryCategory.Frozen -> 30
+            InventoryCategory.Eggs -> 21
+            InventoryCategory.MeatPoultry -> 3
+            InventoryCategory.Seafood -> 2
+            InventoryCategory.Fruits -> 5
+            InventoryCategory.Vegetables -> 7
             InventoryCategory.Bakery -> 4
-            InventoryCategory.CondimentsSauces -> 60
+            InventoryCategory.GrainsPasta -> 365
+            InventoryCategory.CannedGoods -> 730
+            InventoryCategory.Frozen -> 90
+            InventoryCategory.Beverages -> 14
+            InventoryCategory.Condiments -> 180
+            InventoryCategory.Snacks -> 30
+            InventoryCategory.Leftovers -> 3
+            InventoryCategory.Other -> 14
         }
     }
 }

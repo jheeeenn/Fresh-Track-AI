@@ -2,9 +2,8 @@ package my.edu.utar.freshtrackai.logic
 
 import android.content.Context
 import androidx.work.*
-// --- I ONLY FIXED THESE 3 LINES ---
-import my.edu.utar.freshtrackai.logic.`ExpiryCalculator`.ExpiryStatus
-// ----------------------------------
+import androidx.work.ListenableWorker.Result // THIS FIXES THE RESULT ERROR
+import my.edu.utar.freshtrackai.logic.ExpiryCalculator.ExpiryStatus
 import java.time.LocalDate
 import java.util.concurrent.TimeUnit
 
@@ -105,7 +104,7 @@ class ExpiryCheckWorker(
             // Fresh item (Will NOT trigger any notification)
             InventoryItemPlaceholder(4, "Canned Beans", "Pantry", LocalDate.now(), LocalDate.now().plusDays(30))
         )
-    } // <-- Removed the extra '}' that was here!
+    }
 
     // ─────────────────────────────────────────────────────────────
     // Static scheduler — call this from Application or MainActivity

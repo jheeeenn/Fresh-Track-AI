@@ -1,6 +1,5 @@
 ﻿package my.edu.utar.freshtrackai.ui.dashboard
 
-import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.ui.graphics.Color
 
@@ -88,7 +87,7 @@ internal data class RecipeUi(
     val title: String,
     val description: String,
     val prepMinutes: Int,
-    val imageUrl: String,
+    val imageUrl: String?,
     val pantryMatchText: String,
     val tag: String,
     val usedInventoryItemIds: Set<String>,
@@ -119,6 +118,6 @@ internal enum class ScanMode {
 }
 
 internal sealed class ScanCapture(val id: String) {
-    class Camera(id: String, val bitmap: Bitmap) : ScanCapture(id)
+    class Camera(id: String, val uri: Uri) : ScanCapture(id)
     class Gallery(id: String, val uri: Uri) : ScanCapture(id)
 }

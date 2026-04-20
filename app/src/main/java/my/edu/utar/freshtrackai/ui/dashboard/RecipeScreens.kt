@@ -367,12 +367,12 @@ internal fun AiRecipesScreen(
                             CircularProgressIndicator(color = Emerald)
                         }
                     }
-                } else {
-                    items(recipes, key = { it.id }) { recipe ->
-                        RecipeRecommendationCard(
-                            recipe = recipe,
-                            onClick = { onOpenRecipe(recipe.id) })
-                    }
+                }
+            } else {
+                items(recipes, key = { it.id }) { recipe ->
+                    RecipeRecommendationCard(
+                        recipe = recipe,
+                        onClick = { onOpenRecipe(recipe.id) })
                 }
             }
         }
@@ -722,5 +722,3 @@ private fun RecipeEmptyState(
         }
     }
 }
-
-

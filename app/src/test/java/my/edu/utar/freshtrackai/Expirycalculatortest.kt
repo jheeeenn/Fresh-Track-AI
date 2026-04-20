@@ -4,25 +4,9 @@ import my.edu.utar.freshtrackai.logic.ExpiryCalculator
 import org.junit.Assert.*
 import org.junit.Test
 import java.time.LocalDate
-// --- I ONLY ADDED THESE 2 LINES ---
 import my.edu.utar.freshtrackai.logic.ShelfLifeRules
-// ----------------------------------
+import kotlinx.coroutines.runBlocking // ADDED THIS IMPORT
 
-/**
- * ExpiryCalculatorTest.kt
- * Member 3 — Unit Tests
- *
- * Run in Android Studio: right-click this file → "Run ExpiryCalculatorTest"
- * No device or emulator needed. Results appear in the Run panel.
- *
- * Covers ALL Member 3 features:
- * ✅ Shelf-life rule mapping
- * ✅ Expiry date calculation
- * ✅ Near-expiry / expired status logic
- * ✅ Date format parsing (including the BUG FIX for "Apr 16, 2026")
- * ✅ Category-based expiry rules table
- * ✅ Display text / urgency label
- */
 class ExpiryCalculatorTest {
 
     // ═══════════════════════════════════════════════════════════════
@@ -133,31 +117,33 @@ class ExpiryCalculatorTest {
     // 4. EXPIRY DATE CALCULATION
     // ═══════════════════════════════════════════════════════════════
 
+    // ADDED runBlocking TO ALL TESTS CALLING SUSPEND AI FUNCTIONS
     @Test
-    fun `calculation - milk added today expires in 7 days`() {
+    fun `calculation - milk added today expires in 7 days`() = runBlocking {
         val today  = LocalDate.now()
         val result = ExpiryCalculator.estimateExpiryDateByName(today, "milk")
         assertEquals(today.plusDays(7), result)
     }
 
     @Test
-    fun `calculation - eggs added today expires in 21 days`() {
+    fun `calculation - eggs added today expires in 21 days`() = runBlocking {
         val today  = LocalDate.now()
         val result = ExpiryCalculator.estimateExpiryDateByName(today, "eggs")
         assertEquals(today.plusDays(21), result)
     }
 
     @Test
-    fun `calculation - chicken added today expires in 3 days`() {
+    fun `calculation - chicken added today expires in 3 days`() = runBlocking {
         val today  = LocalDate.now()
         val result = ExpiryCalculator.estimateExpiryDateByName(today, "chicken")
         assertEquals(today.plusDays(3), result)
     }
 
+    // REMOVED 'L' FROM NUMBERS (5L -> 5)
     @Test
     fun `calculation - days until expiry 5 days from now is 5`() {
         val future = LocalDate.now().plusDays(5)
-        assertEquals(5L, ExpiryCalculator.daysUntilExpiry(future))
+        assertEquals(5, ExpiryCalculator.daysUntilExpiry(future))
     }
 
     @Test
@@ -170,14 +156,13 @@ class ExpiryCalculatorTest {
     // 5. DATE FORMAT PARSING — BUG FIX TESTS
     // ═══════════════════════════════════════════════════════════════
 
+    // REMOVED 'L' FROM NUMBERS
     @Test
     fun `parse - UI format 'Apr 16, 2026' parses correctly (THE BUG FIX)`() {
-        // This is the format the AddMissingItemScreen uses (placeholder: "Oct 24, 2026")
-        // The old code was missing "MMM d, yyyy" and returned 14 (fallback) instead.
         val futureDate = LocalDate.now().plusDays(30)
         val formatted  = futureDate.format(java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy"))
         val result     = ExpiryCalculator.estimateExpiresInDays(formatted)
-        assertEquals(30L, result)
+        assertEquals(30, result)
     }
 
     @Test
@@ -185,29 +170,29 @@ class ExpiryCalculatorTest {
         val futureDate = LocalDate.now().plusDays(10)
         val formatted  = futureDate.format(java.time.format.DateTimeFormatter.ofPattern("MMMM d, yyyy"))
         val result     = ExpiryCalculator.estimateExpiresInDays(formatted)
-        assertEquals(10L, result)
+        assertEquals(10, result)
     }
 
     @Test
     fun `parse - ISO format 'yyyy-MM-dd' parses correctly`() {
         val futureDate = LocalDate.now().plusDays(10)
         val result     = ExpiryCalculator.estimateExpiresInDays(futureDate.toString())
-        assertEquals(10L, result)
+        assertEquals(10, result)
     }
 
     @Test
     fun `parse - null returns 14-day fallback`() {
-        assertEquals(14L, ExpiryCalculator.estimateExpiresInDays(null))
+        assertEquals(14, ExpiryCalculator.estimateExpiresInDays(null))
     }
 
     @Test
     fun `parse - empty string returns 14-day fallback`() {
-        assertEquals(14L, ExpiryCalculator.estimateExpiresInDays(""))
+        assertEquals(14, ExpiryCalculator.estimateExpiresInDays(""))
     }
 
     @Test
     fun `parse - garbage string returns 14-day fallback`() {
-        assertEquals(14L, ExpiryCalculator.estimateExpiresInDays("not a date"))
+        assertEquals(14, ExpiryCalculator.estimateExpiresInDays("not a date"))
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -215,30 +200,27 @@ class ExpiryCalculatorTest {
     // ═══════════════════════════════════════════════════════════════
 
     @Test
-    fun `scenario - milk bought 5 days ago is CRITICAL`() {
-        // milk shelf = 7 days, bought 5 days ago → 2 days left → CRITICAL
+    fun `scenario - milk bought 5 days ago is CRITICAL`() = runBlocking {
         val purchase = LocalDate.now().minusDays(5)
         val result   = ExpiryCalculator.calculateByName(purchase, "milk")
         assertEquals(ExpiryCalculator.ExpiryStatus.CRITICAL, result.status)
     }
 
     @Test
-    fun `scenario - bread bought 1 day ago is WATCH`() {
-        // bread shelf = 5 days, bought 1 day ago → 4 days left → WATCH
+    fun `scenario - bread bought 1 day ago is WATCH`() = runBlocking {
         val purchase = LocalDate.now().minusDays(1)
         val result   = ExpiryCalculator.calculateByName(purchase, "bread")
         assertEquals(ExpiryCalculator.ExpiryStatus.WATCH, result.status)
     }
 
     @Test
-    fun `scenario - rice bought today is FRESH`() {
+    fun `scenario - rice bought today is FRESH`() = runBlocking {
         val result = ExpiryCalculator.calculateByName(LocalDate.now(), "rice")
         assertEquals(ExpiryCalculator.ExpiryStatus.FRESH, result.status)
     }
 
     @Test
-    fun `scenario - chicken bought 5 days ago is EXPIRED`() {
-        // chicken shelf = 3 days, bought 5 days ago → -2 days → EXPIRED
+    fun `scenario - chicken bought 5 days ago is EXPIRED`() = runBlocking {
         val purchase = LocalDate.now().minusDays(5)
         val result   = ExpiryCalculator.calculateByName(purchase, "chicken")
         assertEquals(ExpiryCalculator.ExpiryStatus.EXPIRED, result.status)

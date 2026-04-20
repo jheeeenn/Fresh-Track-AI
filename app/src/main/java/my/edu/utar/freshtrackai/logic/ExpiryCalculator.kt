@@ -4,6 +4,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.time.temporal.ChronoUnit
+import java.util.Locale
 import kotlin.math.abs
 
 /**
@@ -34,7 +35,7 @@ object ExpiryCalculator {
 
     // ENHANCEMENT: Added UI-ready fields with default values so it doesn't break existing code
     data class ExpiryResult(
-        val daysRemaining: Long,
+        val daysRemaining: Int, // CHANGED TO INT to match UI models
         val status: ExpiryStatus,
         val expiryDate: LocalDate,
         val colorHex: String = "#4CAF50", // Professional UI tip: Logic suggests urgency color
@@ -44,8 +45,8 @@ object ExpiryCalculator {
     // ─────────────────────────────────────────────────────────────
     // Thresholds (easily adjustable)
     // ─────────────────────────────────────────────────────────────
-    private const val CRITICAL_THRESHOLD = 3L
-    private const val WATCH_THRESHOLD    = 7L
+    private const val CRITICAL_THRESHOLD = 3
+    private const val WATCH_THRESHOLD    = 7
 
     // ─────────────────────────────────────────────────────────────
     // Supported date formats
@@ -58,14 +59,14 @@ object ExpiryCalculator {
     // which happened to show as ~24 days (because today + 14 ≠ Apr 16).
     // ─────────────────────────────────────────────────────────────
     private val DATE_FORMATS = listOf(
-        DateTimeFormatter.ofPattern("MMM d, yyyy"),    // "Apr 16, 2026"  ← UI format (WAS MISSING)
-        DateTimeFormatter.ofPattern("MMMM d, yyyy"),   // "April 16, 2026"
-        DateTimeFormatter.ofPattern("yyyy-MM-dd"),     // "2026-04-16"
-        DateTimeFormatter.ofPattern("dd/MM/yyyy"),     // "16/04/2026"
-        DateTimeFormatter.ofPattern("MM/dd/yyyy"),     // "04/16/2026"
-        DateTimeFormatter.ofPattern("dd-MM-yyyy"),     // "16-04-2026"
-        DateTimeFormatter.ofPattern("d MMM yyyy"),     // "16 Apr 2026"
-        DateTimeFormatter.ofPattern("d MMMM yyyy"),    // "16 April 2026"
+        DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.ENGLISH),    // "Apr 16, 2026"
+        DateTimeFormatter.ofPattern("MMMM d, yyyy", Locale.ENGLISH),   // "April 16, 2026"
+        DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.ENGLISH),     // "2026-04-16"
+        DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.ENGLISH),     // "16/04/2026"
+        DateTimeFormatter.ofPattern("MM/dd/yyyy", Locale.ENGLISH),     // "04/16/2026"
+        DateTimeFormatter.ofPattern("dd-MM-yyyy", Locale.ENGLISH),     // "16-04-2026"
+        DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH),     // "16 Apr 2026"
+        DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.ENGLISH),    // "16 April 2026"
     )
 
     // ─────────────────────────────────────────────────────────────
@@ -76,8 +77,8 @@ object ExpiryCalculator {
      * Calculates how many days are left until [expiryDate].
      * Returns negative if already expired.
      */
-    fun daysUntilExpiry(expiryDate: LocalDate): Long {
-        return ChronoUnit.DAYS.between(LocalDate.now(), expiryDate)
+    fun daysUntilExpiry(expiryDate: LocalDate): Int {
+        return ChronoUnit.DAYS.between(LocalDate.now(), expiryDate).toInt() // CHANGED TO INT
     }
 
     /**
@@ -105,7 +106,7 @@ object ExpiryCalculator {
      * Determines ExpiryStatus from a raw [daysRemaining] value.
      * Drop-in replacement for Ian's urgencyForDays() mock.
      */
-    fun getExpiryStatus(daysRemaining: Long): ExpiryStatus = when {
+    fun getExpiryStatus(daysRemaining: Int): ExpiryStatus = when {
         daysRemaining <= 0                  -> ExpiryStatus.EXPIRED
         daysRemaining <= CRITICAL_THRESHOLD -> ExpiryStatus.CRITICAL
         daysRemaining <= WATCH_THRESHOLD    -> ExpiryStatus.WATCH
@@ -150,7 +151,7 @@ object ExpiryCalculator {
     /**
      * Drop-in replacement for Ian's urgencyForDays(days: Int): String
      */
-    fun urgencyLabel(daysRemaining: Long): String = when (getExpiryStatus(daysRemaining)) {
+    fun urgencyLabel(daysRemaining: Int): String = when (getExpiryStatus(daysRemaining)) {
         ExpiryStatus.EXPIRED  -> "Expired"
         ExpiryStatus.CRITICAL -> "Critical"
         ExpiryStatus.WATCH    -> "Watch"
@@ -167,8 +168,8 @@ object ExpiryCalculator {
      * @param expiryDateString the raw string the user typed, e.g. "Apr 16, 2026"
      * @return days from TODAY until that date (negative = already expired)
      */
-    fun estimateExpiresInDays(expiryDateString: String?): Long {
-        if (expiryDateString.isNullOrBlank()) return 14L
+    fun estimateExpiresInDays(expiryDateString: String?): Int {
+        if (expiryDateString.isNullOrBlank()) return 14
 
         val cleaned = expiryDateString.trim()
 
@@ -186,7 +187,7 @@ object ExpiryCalculator {
             return daysUntilExpiry(LocalDate.parse(cleaned))
         } catch (e: Exception) { /* nothing matched */ }
 
-        return 14L // safe fallback
+        return 14 // safe fallback
     }
 
     /**
@@ -212,10 +213,10 @@ object ExpiryCalculator {
      * Human-readable display string for UI.
      * e.g. "Expires in 3 days", "Expired 2 days ago", "Expires today!"
      */
-    fun expiryDisplayText(daysRemaining: Long): String = when {
+    fun expiryDisplayText(daysRemaining: Int): String = when {
         daysRemaining < 0   -> "Expired ${abs(daysRemaining)} day(s) ago"
-        daysRemaining == 0L -> "Expires today!"
-        daysRemaining == 1L -> "Expires tomorrow!"
+        daysRemaining == 0  -> "Expires today!"
+        daysRemaining == 1  -> "Expires tomorrow!"
         else                -> "Expires in $daysRemaining days"
     }
 }
