@@ -38,6 +38,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -56,6 +57,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -123,12 +125,28 @@ internal fun RecipeDetailsScreen(
                         .fillMaxWidth()
                         .height(250.dp)
                 ) {
-                    AsyncImage(
-                        model = recipe.imageUrl,
-                        contentDescription = recipe.title,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
+                    if (!recipe.imageUrl.isNullOrBlank()) {
+                        AsyncImage(
+                            model = recipe.imageUrl,
+                            contentDescription = recipe.title,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color(0xFFEAF7EE),
+                                            Color(0xFFD9F0E1),
+                                            Color(0xFFC7E8D4)
+                                        )
+                                    )
+                                )
+                        )
+                    }
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -320,19 +338,35 @@ internal fun AiRecipesScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("Recommended for You", color = Slate900, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                    Text("View All", color = Emerald, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(onClick = onViewAll))
+
+                    if (recipes.isNotEmpty()) {
+                        Text(
+                            "View All",
+                            color = Emerald,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.clickable(onClick = onViewAll)
+                        )
+                    }
                 }
             }
 
             if (loading && recipes.isEmpty()) {
                 item {
-                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         CircularProgressIndicator(color = Emerald)
                     }
                 }
-            } else {
+            } else if (recipes.isNotEmpty()) {
                 items(recipes, key = { it.id }) { recipe ->
-                    RecipeRecommendationCard(recipe = recipe, onClick = { onOpenRecipe(recipe.id) })
+                    RecipeRecommendationCard(
+                        recipe = recipe,
+                        onClick = { onOpenRecipe(recipe.id) }
+                    )
                 }
             }
         }
@@ -457,13 +491,27 @@ internal fun RecipeViewAllScreen(
 
             if (loading && recipes.isEmpty()) {
                 item {
-                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         CircularProgressIndicator(color = Emerald)
                     }
                 }
+            } else if (recipes.isEmpty()) {
+                item {
+                    RecipeEmptyState(
+                        onGenerate = onRegenerate
+                    )
+                }
             } else {
                 items(recipes, key = { it.id }) { recipe ->
-                    RecipeRecommendationCard(recipe = recipe, onClick = { onOpenRecipe(recipe.id) })
+                    RecipeRecommendationCard(
+                        recipe = recipe,
+                        onClick = { onOpenRecipe(recipe.id) }
+                    )
                 }
             }
         }
@@ -479,13 +527,29 @@ private fun RecipeRecommendationCard(recipe: RecipeUi, onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
     ) {
         Column {
-            Box(modifier = Modifier.fillMaxWidth().height(180.dp)) {
-                AsyncImage(
-                    model = recipe.imageUrl,
-                    contentDescription = recipe.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
+            Box(modifier = Modifier.fillMaxWidth().height(100.dp)) {
+                if (!recipe.imageUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = recipe.imageUrl,
+                        contentDescription = recipe.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.linearGradient(
+                                    colors = listOf(
+                                        Color(0xFFEAF7EE),
+                                        Color(0xFFDDF4E4),
+                                        Color(0xFFCDEFD8)
+                                    )
+                                )
+                            )
+                    )
+                }
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -510,5 +574,67 @@ private fun RecipeRecommendationCard(recipe: RecipeUi, onClick: () -> Unit) {
         }
     }
 }
+@Composable
+private fun RecipeEmptyState(
+    onGenerate: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = White),
+        border = BorderStroke(1.dp, Gray200),
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFEAF7EE)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.RestaurantMenu,
+                    contentDescription = null,
+                    tint = Emerald,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
 
+            Text(
+                text = "No recipe generated yet",
+                color = Slate900,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            )
+
+            Text(
+                text = "Tap the button below to generate one AI recipe from your current inventory.",
+                color = Slate600,
+                fontSize = 14.sp
+            )
+
+            Button(
+                onClick = onGenerate,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Emerald,
+                    contentColor = White
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.AutoAwesome,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text("Generate Recipe", fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
 

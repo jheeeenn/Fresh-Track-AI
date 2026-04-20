@@ -72,8 +72,20 @@ import androidx.compose.ui.viewinterop.AndroidView
 import java.util.UUID
 import my.edu.utar.freshtrackai.R
 
+import android.content.Context
+import androidx.core.content.FileProvider
+import coil.compose.AsyncImage
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import androidx.compose.foundation.layout.*
+
 @Composable
-internal fun SmartScanScreen(onDone: () -> Unit, onTabSelected: (RootTab) -> Unit) {
+internal fun SmartScanScreen(
+    onDone: (ScanMode, List<ScanCapture>) -> Unit,
+    onTabSelected: (RootTab) -> Unit
+) {
     val maxPhotos = 4
     var scanMode by rememberSaveable { mutableStateOf(ScanMode.Food) }
     var gemmaConnected by rememberSaveable { mutableStateOf(true) }
@@ -84,6 +96,23 @@ internal fun SmartScanScreen(onDone: () -> Unit, onTabSelected: (RootTab) -> Uni
     val pendingQueue = remember { mutableStateListOf<ScanCapture>() }
     var reviewCapture by remember { mutableStateOf<ScanCapture?>(null) }
     var showDonePrompt by rememberSaveable { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+
+    fun createTempImageUri(context: Context): Uri {
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+        val imageFile = File.createTempFile(
+            "freshtrack_${timeStamp}_",
+            ".jpg",
+            context.cacheDir
+        )
+        return FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            imageFile
+        )
+    }
 
     fun slotUsedCount(): Int = captures.size + pendingQueue.size + if (reviewCapture != null) 1 else 0
     fun maxReached(): Boolean = slotUsedCount() >= maxPhotos
@@ -115,17 +144,28 @@ internal fun SmartScanScreen(onDone: () -> Unit, onTabSelected: (RootTab) -> Uni
         enqueueForReview(selected)
     }
 
-    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
-        if (bitmap == null) {
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        val uri = pendingCameraUri
+        if (!success || uri == null) {
             helperText = "Camera capture canceled."
+            pendingCameraUri = null
             return@rememberLauncherForActivityResult
         }
         if (maxReached()) {
             helperText = "Maximum 4 photos reached."
+            pendingCameraUri = null
             return@rememberLauncherForActivityResult
         }
-        enqueueForReview(listOf(ScanCapture.Camera(id = UUID.randomUUID().toString(), bitmap = bitmap)))
+        enqueueForReview(
+            listOf(
+                ScanCapture.Camera(
+                    id = UUID.randomUUID().toString(),
+                    uri = uri
+                )
+            )
+        )
         helperText = "Photo captured. Review before continuing."
+        pendingCameraUri = null
     }
 
     val lensLabel = when {
@@ -261,7 +301,11 @@ internal fun SmartScanScreen(onDone: () -> Unit, onTabSelected: (RootTab) -> Uni
                             }
 
                             Button(
-                                onClick = { cameraLauncher.launch(null) },
+                                onClick = {
+                                    val uri = createTempImageUri(context)
+                                    pendingCameraUri = uri
+                                    cameraLauncher.launch(uri)
+                                },
                                 enabled = !maxReached(),
                                 shape = CircleShape,
                                 colors = ButtonDefaults.buttonColors(containerColor = White, contentColor = Emerald),
@@ -327,7 +371,7 @@ internal fun SmartScanScreen(onDone: () -> Unit, onTabSelected: (RootTab) -> Uni
                                 }
                             }
                             Button(
-                                onClick = onDone,
+                                onClick = { onDone(scanMode, captures.toList()) },
                                 colors = ButtonDefaults.buttonColors(containerColor = Emerald, contentColor = White),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -384,7 +428,7 @@ internal fun SmartScanScreen(onDone: () -> Unit, onTabSelected: (RootTab) -> Uni
             confirmButton = {
                 TextButton(onClick = {
                     showDonePrompt = false
-                    onDone()
+                    onDone(scanMode, captures.toList())
                 }) { Text("Done") }
             },
             dismissButton = {
@@ -396,29 +440,16 @@ internal fun SmartScanScreen(onDone: () -> Unit, onTabSelected: (RootTab) -> Uni
 
 @Composable
 private fun CapturePreview(capture: ScanCapture, modifier: Modifier = Modifier) {
-    when (capture) {
-        is ScanCapture.Camera -> {
-            Image(
-                bitmap = capture.bitmap.asImageBitmap(),
-                contentDescription = "Camera capture",
-                modifier = modifier,
-                contentScale = ContentScale.Crop
-            )
-        }
-        is ScanCapture.Gallery -> {
-            AndroidView(
-                modifier = modifier,
-                factory = { context ->
-                    ImageView(context).apply {
-                        scaleType = ImageView.ScaleType.CENTER_CROP
-                    }
-                },
-                update = { view ->
-                    view.setImageURI(capture.uri)
-                }
-            )
-        }
+    val model = when (capture) {
+        is ScanCapture.Camera -> capture.uri
+        is ScanCapture.Gallery -> capture.uri
     }
-}
 
+    AsyncImage(
+        model = model,
+        contentDescription = "Captured image",
+        modifier = modifier,
+        contentScale = ContentScale.Crop
+    )
+}
 
