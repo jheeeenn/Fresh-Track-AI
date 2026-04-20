@@ -18,7 +18,7 @@ internal fun InventoryItem.toExpiringOrNull(): ExpiringItem? {
 }
 
 internal fun urgencyForDays(days: Int): ExpiryBadge? {
-    val status = ExpiryCalculator.getExpiryStatus(days.toLong())
+    val status = ExpiryCalculator.getExpiryStatus(days)
 
     return when (status) {
         ExpiryCalculator.ExpiryStatus.EXPIRED -> ExpiryBadge.Critical
