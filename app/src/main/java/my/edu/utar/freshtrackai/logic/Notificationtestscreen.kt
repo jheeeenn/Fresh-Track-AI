@@ -150,14 +150,14 @@ fun NotificationTestScreen() {
                 title    = "UI format: \"$uiFormatDate\"",
                 result   = "${ExpiryCalculator.estimateExpiresInDays(uiFormatDate)} days",
                 expected = "14 days",
-                passed   = ExpiryCalculator.estimateExpiresInDays(uiFormatDate) == 14L
+                passed   = ExpiryCalculator.estimateExpiresInDays(uiFormatDate) == 14
             )
 
             TestResultCard(
                 title    = "Invalid string: \"garbage\"",
                 result   = "${ExpiryCalculator.estimateExpiresInDays("garbage")} days",
                 expected = "14 days (fallback)",
-                passed   = ExpiryCalculator.estimateExpiresInDays("garbage") == 14L
+                passed   = ExpiryCalculator.estimateExpiresInDays("garbage") == 14
             )
 
             // ── Section 3: Shelf-life Rules ───────────────────────
