@@ -1,5 +1,15 @@
 ﻿package my.edu.utar.freshtrackai.ui.dashboard
 
+// --- NEW IMPORTS ADDED HERE TO FIX THE ERRORS ---
+import androidx.compose.ui.graphics.Color.Companion.White
+import my.edu.utar.freshtrackai.ui.theme.Emerald
+import my.edu.utar.freshtrackai.ui.theme.Gray50
+import my.edu.utar.freshtrackai.ui.theme.Gray100
+import my.edu.utar.freshtrackai.ui.theme.Gray200
+import my.edu.utar.freshtrackai.ui.theme.Slate600
+import my.edu.utar.freshtrackai.ui.theme.Slate900
+// ------------------------------------------------
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -190,5 +200,3 @@ internal fun SmartTipCard(
         }
     }
 }
-
-

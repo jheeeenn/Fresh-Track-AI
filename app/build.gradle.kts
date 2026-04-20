@@ -1,6 +1,5 @@
 import java.io.FileInputStream
 import java.util.Properties
-import java.io.FileInputStream
 
 plugins {
     alias(libs.plugins.android.application)

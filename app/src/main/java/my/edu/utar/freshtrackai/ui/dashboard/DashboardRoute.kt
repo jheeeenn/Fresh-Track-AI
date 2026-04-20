@@ -36,8 +36,6 @@ import my.edu.utar.freshtrackai.ui.theme.FreshTrackAITheme
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import my.edu.utar.freshtrackai.ai.RecipeGenerationViewModel
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import my.edu.utar.freshtrackai.ai.ReceiptOcrProvider
@@ -45,7 +43,6 @@ import my.edu.utar.freshtrackai.ai.ReceiptReviewMapper
 import my.edu.utar.freshtrackai.ai.ScanCaptureBitmapResolver
 import my.edu.utar.freshtrackai.ai.FoodExtractorProvider
 import my.edu.utar.freshtrackai.ai.FoodReviewMapper
-import my.edu.utar.freshtrackai.ui.theme.FreshTrackAITheme
 
 @Composable
 fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
@@ -79,7 +76,6 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
         )
     }
 
-
     LaunchedEffect(recipeUiState.recipes) {
         if (recipeUiState.recipes.isNotEmpty()) {
             if (selectedRecipeId == null || recipeUiState.recipes.none { it.id == selectedRecipeId }) {
@@ -87,7 +83,6 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
             }
         }
     }
-
 
     var toastMessage by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
@@ -227,41 +222,10 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
             )
             WiseScreen.AddMissingItem -> AddMissingItemScreen(
                 draft = addFormDraft,
-                isEditMode = editingReviewItemId != null,
                 isEditMode = editingReviewItemId != null || editingInventoryItemId != null,
                 onDraftChange = { addFormDraft = it },
                 onSubmit = {
-                    when (addItemOrigin) {
-                        AddItemOrigin.ItemReview -> {
-                            val existing = reviewItems.firstOrNull { it.id == editingReviewItemId }
-                            val next = draftToReviewItem(
-                                draft = addFormDraft,
-                                existing = existing,
-                                forcedId = editingReviewItemId
-                            )
-                            val existingIndex = reviewItems.indexOfFirst { it.id == next.id }
-                            if (existingIndex >= 0) {
-                                reviewItems[existingIndex] = next
-                                toastMessage = "Scanned item updated."
-                            } else {
-                                reviewItems.add(next)
-                                toastMessage = "Missing item added."
-                            }
-                            addFormDraft = AddItemFormDraft()
-                            editingReviewItemId = null
-                            screen = WiseScreen.ItemReview
-                        }
-                        AddItemOrigin.Dashboard -> {
-                            inventory.add(draftToInventoryItem(addFormDraft))
-                            toastMessage = "Item added to inventory."
-                            addFormDraft = AddItemFormDraft()
-                            editingReviewItemId = null
-                            screen = WiseScreen.MainDashboard
                     coroutineScope.launch {
-
-                        // ─────────────────────────────────────────────────────────────
-                        // NEW FIX: Only show loading window if AI is ACTUALLY needed!
-                        // ─────────────────────────────────────────────────────────────
                         val existingItem = if (addItemOrigin == AddItemOrigin.ItemReview) {
                             reviewItems.firstOrNull { it.id == editingReviewItemId }
                         } else null

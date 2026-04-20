@@ -337,26 +337,41 @@ internal fun AiRecipesScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Recommended for You", color = Slate900, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                    Text("View All", color = Emerald, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(onClick = onViewAll))
+                    Text(
+                        "Recommended for You",
+                        color = Slate900,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
+                    Text(
+                        "View All",
+                        color = Emerald,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.clickable(onClick = onViewAll)
+                    )
                 }
             }
 
             if (loading && recipes.isEmpty()) {
                 item {
-                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(color = Emerald)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = Emerald)
+                        }
                     }
-                }
                 } else {
                     items(recipes, key = { it.id }) { recipe ->
-                        RecipeRecommendationCard(recipe = recipe, onClick = { onOpenRecipe(recipe.id) })
+                        RecipeRecommendationCard(
+                            recipe = recipe,
+                            onClick = { onOpenRecipe(recipe.id) })
                     }
                 }
             }
@@ -388,7 +403,12 @@ internal fun RecipeViewAllScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Text("View All Recipes", color = Slate900, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                Text(
+                    "View All Recipes",
+                    color = Slate900,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
             }
             item {
                 Card(
@@ -402,19 +422,38 @@ internal fun RecipeViewAllScreen(
                             .padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Text("Customize Generation", color = Slate900, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                        Text("Pick inventory anchors and food avoidances to steer AI recipe suggestions.", color = Slate600)
+                        Text(
+                            "Customize Generation",
+                            color = Slate900,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
+                        )
+                        Text(
+                            "Pick inventory anchors and food avoidances to steer AI recipe suggestions.",
+                            color = Slate600
+                        )
 
-                        Text("Inventory focus", color = Slate600, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                        Text(
+                            "Inventory focus",
+                            color = Slate600,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 12.sp
+                        )
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             items(inventory, key = { it.id }) { item ->
-                                val selected = preferences.selectedInventoryItemIds.contains(item.id)
+                                val selected =
+                                    preferences.selectedInventoryItemIds.contains(item.id)
                                 FilterChip(
                                     selected = selected,
                                     onClick = {
-                                        val next = preferences.selectedInventoryItemIds.toMutableSet()
+                                        val next =
+                                            preferences.selectedInventoryItemIds.toMutableSet()
                                         if (selected) next.remove(item.id) else next.add(item.id)
-                                        onPreferencesChange(preferences.copy(selectedInventoryItemIds = next))
+                                        onPreferencesChange(
+                                            preferences.copy(
+                                                selectedInventoryItemIds = next
+                                            )
+                                        )
                                     },
                                     label = { Text(item.name) }
                                 )
@@ -426,14 +465,29 @@ internal fun RecipeViewAllScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Use inventory only", color = Slate900, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "Use inventory only",
+                                color = Slate900,
+                                fontWeight = FontWeight.SemiBold
+                            )
                             Switch(
                                 checked = preferences.inventoryOnly,
-                                onCheckedChange = { onPreferencesChange(preferences.copy(inventoryOnly = it)) }
+                                onCheckedChange = {
+                                    onPreferencesChange(
+                                        preferences.copy(
+                                            inventoryOnly = it
+                                        )
+                                    )
+                                }
                             )
                         }
 
-                        Text("Avoid ingredients", color = Slate600, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                        Text(
+                            "Avoid ingredients",
+                            color = Slate600,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 12.sp
+                        )
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             items(avoidancePresets) { preset ->
                                 val key = preset.lowercase()
@@ -452,7 +506,13 @@ internal fun RecipeViewAllScreen(
 
                         OutlinedTextField(
                             value = preferences.avoidanceCustomText,
-                            onValueChange = { onPreferencesChange(preferences.copy(avoidanceCustomText = it)) },
+                            onValueChange = {
+                                onPreferencesChange(
+                                    preferences.copy(
+                                        avoidanceCustomText = it
+                                    )
+                                )
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text("Custom avoidances") },
                             placeholder = { Text("e.g. mushrooms, shellfish") },
@@ -461,23 +521,42 @@ internal fun RecipeViewAllScreen(
 
                         Button(
                             onClick = onRegenerate,
-                            colors = ButtonDefaults.buttonColors(containerColor = Emerald, contentColor = White),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Emerald,
+                                contentColor = White
+                            ),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             if (loading) {
-                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = White)
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = White
+                                )
                             } else {
-                                Icon(Icons.Outlined.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Icon(
+                                    Icons.Outlined.AutoAwesome,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
                             }
                             Spacer(Modifier.width(6.dp))
-                            Text(if (loading) "Regenerating..." else "Regenerate", fontWeight = FontWeight.Bold)
+                            Text(
+                                if (loading) "Regenerating..." else "Regenerate",
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
             }
 
             item {
-                Text("Results (${recipes.size})", color = Slate900, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(
+                    "Results (${recipes.size})",
+                    color = Slate900,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
             }
 
             if (loading && recipes.isEmpty()) {
@@ -550,13 +629,27 @@ private fun RecipeRecommendationCard(recipe: RecipeUi, onClick: () -> Unit) {
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("${recipe.prepMinutes} MIN", color = Color(0xFF166534), fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                    Text(
+                        "${recipe.prepMinutes} MIN",
+                        color = Color(0xFF166534),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp
+                    )
                 }
             }
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(recipe.title, color = Slate900, fontWeight = FontWeight.Bold, fontSize = 22.sp, lineHeight = 26.sp)
+                Text(
+                    recipe.title,
+                    color = Slate900,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp,
+                    lineHeight = 26.sp
+                )
                 Text(recipe.description, color = Slate600)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text("🥗", fontSize = 14.sp)
                     Text(recipe.pantryMatchText, color = Slate600, fontSize = 12.sp)
                 }
@@ -565,6 +658,7 @@ private fun RecipeRecommendationCard(recipe: RecipeUi, onClick: () -> Unit) {
         }
     }
 }
+
 @Composable
 private fun RecipeEmptyState(
     onGenerate: () -> Unit
@@ -628,5 +722,5 @@ private fun RecipeEmptyState(
         }
     }
 }
-    }
+
 
