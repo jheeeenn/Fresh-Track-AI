@@ -338,20 +338,13 @@ internal fun AiRecipesScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("Recommended for You", color = Slate900, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-
-                    if (recipes.isNotEmpty()) {
-                        Text(
-                            "View All",
-                            color = Emerald,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.clickable(onClick = onViewAll)
-                        )
-                    }
+                    Text("View All", color = Emerald, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(onClick = onViewAll))
                 }
             }
 
             if (loading && recipes.isEmpty()) {
                 item {
+                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -361,12 +354,10 @@ internal fun AiRecipesScreen(
                         CircularProgressIndicator(color = Emerald)
                     }
                 }
-            } else if (recipes.isNotEmpty()) {
-                items(recipes, key = { it.id }) { recipe ->
-                    RecipeRecommendationCard(
-                        recipe = recipe,
-                        onClick = { onOpenRecipe(recipe.id) }
-                    )
+                } else {
+                    items(recipes, key = { it.id }) { recipe ->
+                        RecipeRecommendationCard(recipe = recipe, onClick = { onOpenRecipe(recipe.id) })
+                    }
                 }
             }
         }
@@ -637,4 +628,5 @@ private fun RecipeEmptyState(
         }
     }
 }
+    }
 

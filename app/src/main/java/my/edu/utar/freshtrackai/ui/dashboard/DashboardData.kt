@@ -15,24 +15,58 @@ internal fun InventoryItem.toExpiringOrNull(): ExpiringItem? {
     )
 }
 
-internal fun urgencyForDays(days: Int): ExpiryBadge? = when (days) {
-    in 0..1 -> ExpiryBadge.Critical
-    in 2..3 -> ExpiryBadge.Warning
-    in 4..7 -> ExpiryBadge.Watch
-    else -> null
+internal fun urgencyForDays(days: Int): ExpiryBadge? {
+    val status = my.edu.utar.freshtrackai.logic.`ExpiryCalculator`.getExpiryStatus(days.toLong())
+
+    return when (status) {
+        my.edu.utar.freshtrackai.logic.`ExpiryCalculator`.ExpiryStatus.EXPIRED -> ExpiryBadge.Critical
+        my.edu.utar.freshtrackai.logic.`ExpiryCalculator`.ExpiryStatus.CRITICAL -> ExpiryBadge.Critical
+        my.edu.utar.freshtrackai.logic.`ExpiryCalculator`.ExpiryStatus.WATCH -> ExpiryBadge.Watch
+        else -> null
+    }
 }
 
 internal fun daysLabel(days: Int): String = if (days <= 0) "Expires today" else "Expires in ${days}d"
 
 internal fun categoryEmoji(category: InventoryCategory): String = when (category) {
-    InventoryCategory.Produce -> "🥕"
     InventoryCategory.Dairy -> "🥛"
-    InventoryCategory.MeatProtein -> "🍗"
-    InventoryCategory.Beverages -> "🧃"
-    InventoryCategory.PantryDryGoods -> "🥫"
-    InventoryCategory.Frozen -> "🧊"
+    InventoryCategory.Eggs -> "🥚"
+    InventoryCategory.MeatPoultry -> "🥩"
+    InventoryCategory.Seafood -> "🐟"
+    InventoryCategory.Fruits -> "🍎"
+    InventoryCategory.Vegetables -> "🥕"
     InventoryCategory.Bakery -> "🥐"
-    InventoryCategory.CondimentsSauces -> "🧂"
+    InventoryCategory.GrainsPasta -> "🌾"
+    InventoryCategory.CannedGoods -> "🥫"
+    InventoryCategory.Frozen -> "🧊"
+    InventoryCategory.Beverages -> "🧃"
+    InventoryCategory.Condiments -> "🧂"
+    InventoryCategory.Snacks -> "🥨"
+    InventoryCategory.Leftovers -> "🥡"
+    InventoryCategory.Other -> "📦"
+}
+
+// ─────────────────────────────────────────────────────────────
+// SAFE MAPPER: UI Dropdown -> Logic Enums
+// ─────────────────────────────────────────────────────────────
+internal fun InventoryCategory.toLogicCategory(): my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory {
+    return when(this) {
+        InventoryCategory.Dairy -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.DAIRY
+        InventoryCategory.Eggs -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.EGGS
+        InventoryCategory.MeatPoultry -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.MEAT_POULTRY
+        InventoryCategory.Seafood -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.SEAFOOD
+        InventoryCategory.Fruits -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.FRUITS
+        InventoryCategory.Vegetables -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.VEGETABLES
+        InventoryCategory.Bakery -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.BAKERY
+        InventoryCategory.GrainsPasta -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.GRAINS_PASTA
+        InventoryCategory.CannedGoods -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.CANNED_GOODS
+        InventoryCategory.Frozen -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.FROZEN
+        InventoryCategory.Beverages -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.BEVERAGES
+        InventoryCategory.Condiments -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.CONDIMENTS
+        InventoryCategory.Snacks -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.SNACKS
+        InventoryCategory.Leftovers -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.LEFTOVERS
+        InventoryCategory.Other -> my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.OTHER
+    }
 }
 
 internal fun removeInventoryItem(list: MutableList<InventoryItem>, inventoryId: String) {
@@ -42,24 +76,24 @@ internal fun removeInventoryItem(list: MutableList<InventoryItem>, inventoryId: 
 
 internal fun seedInventoryItems(): List<InventoryItem> = listOf(
     InventoryItem("it-001", "Whole Milk", InventoryCategory.Dairy, "0.5 gal", 2, 1, "milk"),
-    InventoryItem("it-002", "Baby Spinach", InventoryCategory.Produce, "1 bunch", 1, 3, "spinach"),
-    InventoryItem("it-003", "Ribeye Steak", InventoryCategory.MeatProtein, "0.8 kg", 2, 4, "steak"),
+    InventoryItem("it-002", "Baby Spinach", InventoryCategory.Vegetables, "1 bunch", 1, 3, "spinach"),
+    InventoryItem("it-003", "Ribeye Steak", InventoryCategory.MeatPoultry, "0.8 kg", 2, 4, "steak"),
     InventoryItem("it-004", "Orange Juice", InventoryCategory.Beverages, "1.0 L", 3, 6, "juice"),
-    InventoryItem("it-005", "Brown Rice", InventoryCategory.PantryDryGoods, "2.0 kg", 7, 24, "rice"),
+    InventoryItem("it-005", "Brown Rice", InventoryCategory.GrainsPasta, "2.0 kg", 7, 24, "rice"),
     InventoryItem("it-006", "Frozen Peas", InventoryCategory.Frozen, "1 pack", 5, 30, "peas"),
     InventoryItem("it-007", "Sourdough Bread", InventoryCategory.Bakery, "1 loaf", 1, 2, "bread"),
-    InventoryItem("it-008", "Hot Sauce", InventoryCategory.CondimentsSauces, "250 ml", 12, 120, "sauce"),
+    InventoryItem("it-008", "Hot Sauce", InventoryCategory.Condiments, "250 ml", 12, 120, "sauce"),
     InventoryItem("it-009", "Greek Yogurt", InventoryCategory.Dairy, "500 g", 1, 8, "yogurt"),
-    InventoryItem("it-010", "Chicken Breast", InventoryCategory.MeatProtein, "1.2 kg", 1, 2, "chicken"),
-    InventoryItem("it-011", "Carrots", InventoryCategory.Produce, "1.2 kg", 2, 12, "carrot"),
-    InventoryItem("it-012", "Avocados", InventoryCategory.Produce, "3 pcs", 3, 5, "avocado")
+    InventoryItem("it-010", "Chicken Breast", InventoryCategory.MeatPoultry, "1.2 kg", 1, 2, "chicken"),
+    InventoryItem("it-011", "Carrots", InventoryCategory.Vegetables, "1.2 kg", 2, 12, "carrot"),
+    InventoryItem("it-012", "Avocados", InventoryCategory.Fruits, "3 pcs", 3, 5, "avocado")
 )
 
 internal fun seedReviewItems(): List<ReviewItemUi> = listOf(
     ReviewItemUi(
         id = "rev-001",
         name = "Organic Baby Spinach",
-        category = InventoryCategory.Produce,
+        category = InventoryCategory.Vegetables,
         quantityLabel = "1 box",
         expiresLabel = "Oct 24, 2026",
         expiresInDays = 6,
@@ -79,7 +113,7 @@ internal fun seedReviewItems(): List<ReviewItemUi> = listOf(
     ReviewItemUi(
         id = "rev-003",
         name = "Red Bell Pepper",
-        category = InventoryCategory.Produce,
+        category = InventoryCategory.Vegetables,
         quantityLabel = "3 units",
         expiresLabel = "Oct 28, 2026",
         expiresInDays = 10,
@@ -89,7 +123,7 @@ internal fun seedReviewItems(): List<ReviewItemUi> = listOf(
     ReviewItemUi(
         id = "rev-004",
         name = "Chicken Breast",
-        category = InventoryCategory.MeatProtein,
+        category = InventoryCategory.MeatPoultry,
         quantityLabel = "500g",
         expiresLabel = "Oct 21, 2026",
         expiresInDays = 4,
@@ -116,7 +150,33 @@ internal fun ReviewItemUi.toDraft(): AddItemFormDraft = AddItemFormDraft(
     nutritionNotes = nutritionLabel
 )
 
-internal fun draftToReviewItem(
+// ─────────────────────────────────────────────────────────────
+// NEW FIX: Tells the UI whether we actually need to call the AI
+// ─────────────────────────────────────────────────────────────
+internal fun requiresAiCheck(draft: AddItemFormDraft, existing: ReviewItemUi? = null): Boolean {
+    val resolvedLabel = draft.expiryDate.trim().ifBlank { existing?.expiresLabel ?: "Not set" }
+
+    // 1. If user typed a date (or didn't change the existing date), we don't need AI
+    if (existing != null && resolvedLabel == existing.expiresLabel) return false
+    if (resolvedLabel != "Not set" && resolvedLabel.isNotBlank()) return false
+
+    // 2. If it perfectly matches our offline dictionary, we don't need AI
+    val resolvedName = draft.name.trim().ifBlank { "Unnamed Item" }
+    val localCategory = my.edu.utar.freshtrackai.logic.ShelfLifeRules.detectCategory(resolvedName)
+    val selectedCategory = draft.category.toLogicCategory()
+
+    if (localCategory == selectedCategory && localCategory != my.edu.utar.freshtrackai.logic.ShelfLifeRules.FoodCategory.OTHER) {
+        return false // Instant offline match!
+    }
+
+    // 3. Otherwise, we MUST wake up the AI!
+    return true
+}
+
+// ─────────────────────────────────────────────────────────────
+// UPDATED: Now a suspend function that asks AI for exact days!
+// ─────────────────────────────────────────────────────────────
+internal suspend fun draftToReviewItem(
     draft: AddItemFormDraft,
     existing: ReviewItemUi?,
     forcedId: String?
@@ -124,15 +184,23 @@ internal fun draftToReviewItem(
     val resolvedName = draft.name.trim().ifBlank { "Unnamed Item" }
     val resolvedQuantity = draft.quantity.trim().ifBlank { "1 unit" }
     val resolvedLabel = draft.expiryDate.trim().ifBlank { existing?.expiresLabel ?: "Not set" }
+    val finalCategory = draft.category // We trust the user's category dropdown
+
     val resolvedDays = when {
         existing != null && resolvedLabel == existing.expiresLabel -> existing.expiresInDays
-        else -> estimateExpiresInDays(resolvedLabel, fallback = existing?.expiresInDays ?: 7)
+        resolvedLabel == "Not set" || resolvedLabel.isBlank() ->
+            // 1. Asks AI for exact days based on the name.
+            // 2. Passes the selected Dropdown Category as context and fallback.
+            my.edu.utar.freshtrackai.logic.ShelfLifeRules.getShelfLifeByNameAI(
+                resolvedName, finalCategory.toLogicCategory()
+            )
+        else -> my.edu.utar.freshtrackai.logic.`ExpiryCalculator`.estimateExpiresInDays(resolvedLabel).toInt()
     }
 
     return ReviewItemUi(
         id = forcedId ?: existing?.id ?: "rev-${UUID.randomUUID().toString().take(8)}",
         name = resolvedName,
-        category = draft.category,
+        category = finalCategory,
         quantityLabel = resolvedQuantity,
         expiresLabel = resolvedLabel,
         expiresInDays = resolvedDays,
@@ -141,22 +209,36 @@ internal fun draftToReviewItem(
     )
 }
 
-internal fun draftToInventoryItem(draft: AddItemFormDraft): InventoryItem = InventoryItem(
-    id = "it-${UUID.randomUUID().toString().take(8)}",
-    name = draft.name.trim().ifBlank { "Unnamed Item" },
-    category = draft.category,
-    quantityLabel = draft.quantity.trim().ifBlank { "1 unit" },
-    addedDaysAgo = 0,
-    expiresInDays = estimateExpiresInDays(draft.expiryDate, fallback = 7),
-    thumbnailRef = draft.name.trim().ifBlank { "item" }.lowercase().replace(" ", "_")
-)
+// ─────────────────────────────────────────────────────────────
+// UPDATED: Now a suspend function that asks AI for exact days!
+// ─────────────────────────────────────────────────────────────
+internal suspend fun draftToInventoryItem(draft: AddItemFormDraft): InventoryItem {
+    val resolvedName = draft.name.trim().ifBlank { "Unnamed Item" }
+    val finalCategory = draft.category
+
+    val resolvedDays = if (draft.expiryDate.isBlank() || draft.expiryDate == "Not set") {
+        // 1. Asks AI for exact days based on the name.
+        // 2. Passes the selected Dropdown Category as context and fallback.
+        my.edu.utar.freshtrackai.logic.ShelfLifeRules.getShelfLifeByNameAI(
+            resolvedName, finalCategory.toLogicCategory()
+        )
+    } else {
+        my.edu.utar.freshtrackai.logic.`ExpiryCalculator`.estimateExpiresInDays(draft.expiryDate).toInt()
+    }
+
+    return InventoryItem(
+        id = "it-${UUID.randomUUID().toString().take(8)}",
+        name = resolvedName,
+        category = finalCategory,
+        quantityLabel = draft.quantity.trim().ifBlank { "1 unit" },
+        addedDaysAgo = 0,
+        expiresInDays = resolvedDays,
+        thumbnailRef = resolvedName.lowercase().replace(" ", "_")
+    )
+}
 
 internal fun estimateExpiresInDays(input: String, fallback: Int): Int {
-    val text = input.lowercase().trim()
-    if (text.contains("today")) return 0
-    if (text.contains("tomorrow")) return 1
-    Regex("""(\d+)\s*d""").find(text)?.groupValues?.getOrNull(1)?.toIntOrNull()?.let { return it }
-    return fallback
+    return my.edu.utar.freshtrackai.logic.`ExpiryCalculator`.estimateExpiresInDays(input).toInt()
 }
 
 internal fun reviewThumbBackground(ref: String): Color {
@@ -186,7 +268,7 @@ internal fun generateRecipesForPreferences(
     }
     val selectedIds = if (selected.isEmpty()) availableInventoryIds else selected
     val avoidTokens = parseAvoidanceTokens(preferences.avoidanceCustomText) +
-        preferences.avoidancePresetSet.map { it.lowercase() }.toSet()
+            preferences.avoidancePresetSet.map { it.lowercase() }.toSet()
 
     val filtered = recipesAll.filter { recipe ->
         val avoidsAllowed = avoidTokens.none { token -> recipe.avoidanceTokens.contains(token) }
@@ -423,5 +505,3 @@ internal fun seedShoppingListItems(): List<ShoppingListItemUi> = listOf(
     ShoppingListItemUi(id = "shop-g-003", name = "Paper Towels"),
     ShoppingListItemUi(id = "shop-g-004", name = "Avocados (x2)", checked = true)
 )
-
-
