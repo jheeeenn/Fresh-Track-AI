@@ -374,7 +374,9 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                     ?: recipeUiState.recipes.firstOrNull()
 
                 if (recipe == null) {
-                    screen = recipeBackTarget
+                    LaunchedEffect(Unit) {
+                        screen = recipeBackTarget
+                    }
                     return@Box
                 }
                 RecipeDetailsScreen(
