@@ -13,6 +13,7 @@ val localProperties = Properties().apply {
 }
 
 val geminiApiKey = localProperties.getProperty("GEMINI_API_KEY", "")
+    .ifEmpty { localProperties.getProperty("API_KEY", "") }
 
 android {
     namespace = "my.edu.utar.freshtrackai"
@@ -70,7 +71,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
 
     // Google AI (For Gemini integration)
-    implementation("com.google.ai.client.generativeai:generativeai:0.7.0")
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
 
     // Testing
     testImplementation(libs.junit)

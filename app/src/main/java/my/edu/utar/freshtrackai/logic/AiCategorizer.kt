@@ -10,10 +10,12 @@ object AiCategorizer {
 
     private val API_KEY = BuildConfig.GEMINI_API_KEY
 
-    private val generativeModel = GenerativeModel(
-        modelName = "gemini-2.5-flash",
-        apiKey = API_KEY
+    private val generativeModel by lazy {
+        GenerativeModel(
+            modelName = "gemini-2.5-flash",
+            apiKey = API_KEY
     )
+    }
 
     // ─────────────────────────────────────────────────────────────
     // FUNCTION 1: Asks AI for EXACT DAYS
