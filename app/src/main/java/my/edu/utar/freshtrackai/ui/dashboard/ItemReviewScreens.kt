@@ -1,4 +1,4 @@
-﻿package my.edu.utar.freshtrackai.ui.dashboard
+package my.edu.utar.freshtrackai.ui.dashboard
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -69,6 +69,7 @@ internal fun AddMissingItemScreen(
     isEditMode: Boolean,
     onDraftChange: (AddItemFormDraft) -> Unit,
     onSubmit: () -> Unit,
+    onDelete: () -> Unit = {},
     onBack: () -> Unit,
     onTabSelected: (RootTab) -> Unit
 ) {
@@ -80,19 +81,50 @@ internal fun AddMissingItemScreen(
         bottomBar = {
             Column(Modifier.fillMaxWidth().background(White)) {
                 HorizontalDivider(color = Gray200)
-                Button(
-                    onClick = onSubmit,
-                    enabled = canSubmit,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Emerald, contentColor = White),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 12.dp)
-                        .height(56.dp)
-                ) {
-                    Icon(Icons.Outlined.AddCircle, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(if (isEditMode) "Save Changes" else "Add Item", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                if (isEditMode) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = onDelete,
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = RoseRed, contentColor = White),
+                            modifier = Modifier.weight(1f).height(56.dp)
+                        ) {
+                            Icon(Icons.Outlined.Delete, contentDescription = "Delete", modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Delete", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Button(
+                            onClick = onSubmit,
+                            enabled = canSubmit,
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Emerald, contentColor = White),
+                            modifier = Modifier.weight(1f).height(56.dp)
+                        ) {
+                            Icon(Icons.Outlined.CheckCircle, contentDescription = "Save", modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Save", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = onSubmit,
+                        enabled = canSubmit,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Emerald, contentColor = White),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp)
+                            .height(56.dp)
+                    ) {
+                        Icon(Icons.Outlined.AddCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Add Item", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
                 BottomNav(RootTab.Scan, onTabSelected)
             }

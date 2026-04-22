@@ -287,6 +287,23 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                         }
                     }
                 },
+                onDelete = {
+                    coroutineScope.launch {
+                        if (editingInventoryItemId != null) {
+                            editingInventoryItemId!!.toLongOrNull()?.let { inventoryVm.deleteItemById(it) }
+                            toastMessage = "Item deleted from inventory."
+                            screen = WiseScreen.MainDashboard
+                        } else if (editingReviewItemId != null) {
+                            val idx = reviewItems.indexOfFirst { it.id == editingReviewItemId }
+                            if (idx >= 0) reviewItems.removeAt(idx)
+                            toastMessage = "Scanned item deleted."
+                            screen = WiseScreen.ItemReview
+                        }
+                        editingInventoryItemId = null
+                        editingReviewItemId = null
+                        addFormDraft = AddItemFormDraft()
+                    }
+                },
                 onBack = {
                     screen = if (addItemOrigin == AddItemOrigin.ItemReview) {
                         WiseScreen.ItemReview
