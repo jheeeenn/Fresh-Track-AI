@@ -59,7 +59,7 @@ object NutritionAiHelper {
     private val geminiModel by lazy {
         GenerativeModel(
             modelName = "gemini-2.5-flash",
-            apiKey = BuildConfig.GEMINI_API_KEY
+            apiKey = BuildConfig.API_KEY
         )
     }
 
@@ -85,7 +85,12 @@ object NutritionAiHelper {
                     
                     Extract ONLY the key nutritional values that are clearly printed.
                     Format the result as a SHORT, human-readable single line like this example:
-                    "120 kcal / serving • Protein: 5g • Fat: 4g • Carbs: 18g • Sugar: 6g • Sodium: 210mg"
+                    "120 kcal / serving  
+                    Protein: 5g 
+                    Fat: 4g 
+                    Carbs: 18g 
+                    Sugar: 6g 
+                    Sodium: 210mg"
                     
                     Rules:
                     - Include only values that are clearly visible and legible on the label.
@@ -170,7 +175,12 @@ object NutritionAiHelper {
                 Provide a typical nutritional estimate for: "$itemName"$categoryHint.
                 
                 Format the result as a SHORT, human-readable single line like this example:
-                "61 kcal / 100ml • Protein: 3.2g • Fat: 3.3g • Carbs: 4.8g • Sugar: 4.8g • Calcium: 120mg"
+                "61 kcal / 100ml 
+                Protein: 3.2g 
+                Fat: 3.3g 
+                Carbs: 4.8g 
+                Sugar: 4.8g 
+                Calcium: 120mg"
                 
                 Rules:
                 - Use "per 100g" or "per 100ml" as the base unit (whichever is appropriate).
@@ -180,7 +190,11 @@ object NutritionAiHelper {
                 - Return ONLY the formatted string. No extra text, no markdown.
             """.trimIndent()
 
-            val response = geminiModel.generateContent(prompt)
+            val response = try {
+                geminiModel.generateContent(prompt)
+            } catch (e: Exception) {
+                return@withContext NutritionResult.Failure("Gemini is busy, please try again in a moment.")
+            }
             val raw = response.text?.trim().orEmpty()
 
             Log.d(TAG, "Gemini nutrition estimate: $raw")

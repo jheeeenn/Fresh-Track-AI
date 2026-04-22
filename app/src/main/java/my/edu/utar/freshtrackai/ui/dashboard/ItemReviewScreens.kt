@@ -1,8 +1,15 @@
 package my.edu.utar.freshtrackai.ui.dashboard
 
 import androidx.compose.foundation.background
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,6 +70,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 internal fun AddMissingItemScreen(
     draft: AddItemFormDraft,
@@ -75,6 +83,8 @@ internal fun AddMissingItemScreen(
 ) {
     var categoryExpanded by remember { mutableStateOf(false) }
     val canSubmit = draft.name.isNotBlank()
+    val coroutineScope = rememberCoroutineScope()
+    var showDatePicker by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = { DashboardTopBar() },
@@ -230,54 +240,48 @@ internal fun AddMissingItemScreen(
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text("Expiry Date") },
                             placeholder = { Text("e.g. Oct 24, 2026") },
-                            leadingIcon = { Icon(Icons.Outlined.DateRange, contentDescription = null, tint = Slate600) },
+                            leadingIcon = {
+                                IconButton(onClick = { showDatePicker = true }) {
+                                    Icon(Icons.Outlined.DateRange, contentDescription = "Pick date", tint = Emerald)
+                                }
+                            },
                             colors = freshOutlinedTextFieldColors(),
                             singleLine = true
                         )
+
+                        if (showDatePicker) {
+                            val datePickerState = rememberDatePickerState(
+                                initialSelectedDateMillis = System.currentTimeMillis()
+                            )
+                            DatePickerDialog(
+                                onDismissRequest = { showDatePicker = false },
+                                confirmButton = {
+                                    TextButton(onClick = {
+                                        datePickerState.selectedDateMillis?.let { millis ->
+                                            val cal = java.util.Calendar.getInstance().apply { timeInMillis = millis }
+                                            val formatted = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.ENGLISH).format(cal.time)
+                                            onDraftChange(draft.copy(expiryDate = formatted))
+                                        }
+                                        showDatePicker = false
+                                    }) { Text("OK") }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+                                }
+                            ) {
+                                DatePicker(state = datePickerState)
+                            }
+                        }
                     }
                 }
             }
-
+            //Nutrition info part
             item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = White),
-                    border = BorderStroke(1.dp, Gray200),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text("🍎", fontSize = 18.sp)
-                            Text("Nutritional Info", color = Slate900, fontWeight = FontWeight.Bold)
-                        }
-                        OutlinedTextField(
-                            value = draft.nutritionNotes,
-                            onValueChange = { onDraftChange(draft.copy(nutritionNotes = it)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text("e.g. 23 kcal / 100g, high fiber, low sodium") },
-                            colors = freshOutlinedTextFieldColors(),
-                            minLines = 4
-                        )
-                        OutlinedButton(
-                            onClick = {
-                                if (draft.nutritionNotes.isBlank()) {
-                                    onDraftChange(draft.copy(nutritionNotes = "Quick scan label (mock): 120 kcal / serving"))
-                                }
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, Gray200),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Outlined.CameraAlt, contentDescription = null, tint = Slate600)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Quick Scan Label", color = Slate900, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                }
+                NutritionalInfoCard(
+                    draft = draft,
+                    onDraftChange = onDraftChange,
+                    coroutineScope = coroutineScope
+                )
             }
         }
     }
