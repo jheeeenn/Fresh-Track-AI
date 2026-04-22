@@ -300,6 +300,7 @@ internal fun AiRecipesScreen(
     inventory: List<InventoryItem>,
     recipes: List<RecipeUi>,
     loading: Boolean,
+    loadingMessage: String?,
     onGenerate: () -> Unit,
     onViewAll: () -> Unit,
     onOpenRecipe: (String) -> Unit,
@@ -358,13 +359,16 @@ internal fun AiRecipesScreen(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 16.dp),
-                            contentAlignment = Alignment.Center
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             CircularProgressIndicator(color = Emerald)
+                            Text(
+                                text = loadingMessage ?: "Generating recipes...",
+                                color = Slate600,
+                                textAlign = TextAlign.Center
+                            )
                         }
                     }
                 }
@@ -385,6 +389,7 @@ internal fun RecipeViewAllScreen(
     recipes: List<RecipeUi>,
     preferences: RecipePreferencesUi,
     loading: Boolean,
+    loadingMessage: String?,
     onPreferencesChange: (RecipePreferencesUi) -> Unit,
     onRegenerate: () -> Unit,
     onOpenRecipe: (String) -> Unit,
@@ -518,6 +523,14 @@ internal fun RecipeViewAllScreen(
                             placeholder = { Text("e.g. mushrooms, shellfish") },
                             colors = freshOutlinedTextFieldColors()
                         )
+
+                        if (loading && !loadingMessage.isNullOrBlank()) {
+                            Text(
+                                text = loadingMessage,
+                                color = Slate600,
+                                fontSize = 12.sp
+                            )
+                        }
 
                         Button(
                             onClick = onRegenerate,

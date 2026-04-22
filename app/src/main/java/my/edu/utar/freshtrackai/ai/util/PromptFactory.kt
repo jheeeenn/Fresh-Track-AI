@@ -12,20 +12,25 @@ internal object PromptFactory {
 """
 
     fun recipePrompt(inventorySummary: String): String = """
-You are a professional chef and recipe generator AI.
+You are a recipe assistant.
 
-Given the following food inventory, suggest 3-4 practical recipes the user can cook.
-Prioritize recipes that use items likely to expire soon.
+Task:
+- Propose exactly 2 practical recipes using the provided inventory.
+- Prefer recipes that consume soon-to-expire ingredients first.
+- Keep recipes simple for home cooking.
 
 Inventory:
 $inventorySummary
 
-Return STRICT JSON only in the following format. No markdown, no explanation, no preamble:
+Output requirements:
+- Return STRICT JSON only.
+- No markdown fences, no prose, no additional keys.
+- Schema:
 {
   "recipes": [
     {
       "title": "Recipe Name",
-      "description": "Brief one-sentence description of the dish.",
+      "description": "One short sentence.",
       "availableIngredients": [
         { "name": "Ingredient Name", "quantity": "amount" }
       ],
@@ -33,18 +38,17 @@ Return STRICT JSON only in the following format. No markdown, no explanation, no
         { "name": "Ingredient Name", "quantity": "amount" }
       ],
       "instructions": [
-        "Step 1 description.",
-        "Step 2 description."
+        "1. Step one.",
+        "2. Step two."
       ]
     }
   ]
 }
 
 Rules:
-- availableIngredients must only contain items from the provided inventory
-- missingIngredients should list any additional items needed that are NOT in inventory
-- instructions should be clear, numbered steps as plain strings
-- Return only valid JSON, no markdown fences
+- availableIngredients can only include items from inventory.
+- missingIngredients must include only items not present in inventory.
+- instructions must be concise and actionable.
 """.trimIndent()
 
     fun foodImageOcrPrompt(): String = """

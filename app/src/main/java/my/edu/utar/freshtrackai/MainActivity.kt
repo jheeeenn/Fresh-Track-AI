@@ -24,10 +24,13 @@ import android.util.Log
 import androidx.activity.result.contract.ActivityResultContracts
 import java.io.File
 import my.edu.utar.freshtrackai.ai.GemmaModelStore
+import my.edu.utar.freshtrackai.ai.AppContextProvider
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        AppContextProvider.initialize(applicationContext)
 
         // Member 3: Create notification channels and schedule worker
         NotificationHelper.createNotificationChannels(this)
