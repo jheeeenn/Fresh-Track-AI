@@ -353,6 +353,7 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                 recipes = recipeRecommendations,
                 preferences = recipePreferences,
                 loading = recipeLoading,
+                loadingMessage = recipeUiState.processingMessage,
                 onPreferencesChange = { recipePreferences = it },
                 onRegenerate = { recipeRefreshTick++ },
                 onOpenRecipe = { recipeId ->
@@ -426,6 +427,7 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                 inventory = inventory,
                 recipes = recipeUiState.recipes.take(4),
                 loading = recipeUiState.isLoading,
+                loadingMessage = recipeUiState.processingMessage,
                 onGenerate = { refreshRecipes() },
                 onViewAll = { screen = WiseScreen.RecipeViewAll },
                 onOpenRecipe = { recipeId ->

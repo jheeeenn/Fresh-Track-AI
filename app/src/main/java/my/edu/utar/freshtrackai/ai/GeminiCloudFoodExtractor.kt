@@ -22,7 +22,10 @@ class GeminiCloudFoodExtractor(
         )
     }
 
-    override suspend fun suggestRecipes(inventorySummary: String): RecipeSuggestionResult {
+    override suspend fun suggestRecipes(
+        inventorySummary: String,
+        onStatus: ((String) -> Unit)?
+    ): RecipeSuggestionResult {
         return withContext(Dispatchers.IO) {
             val prompt = PromptFactory.recipePrompt(inventorySummary)
             val maxAttempts = 3
@@ -30,6 +33,7 @@ class GeminiCloudFoodExtractor(
 
             for (attempt in 0 until maxAttempts) {
                 try {
+                    onStatus?.invoke("Generating recipes with Gemini (${attempt + 1}/$maxAttempts)...")
                     val response = generativeModel.generateContent(prompt)
                     val text = response.text.orEmpty().trim()
 
@@ -47,6 +51,7 @@ class GeminiCloudFoodExtractor(
                     }
 
                     val backoffMillis = 1000L * (attempt + 1)
+                    onStatus?.invoke("Gemini is busy, retrying...")
                     Log.w(
                         "GEMINI_RECIPE",
                         "Gemini temporarily unavailable (attempt ${attempt + 1}/$maxAttempts). Retrying in ${backoffMillis}ms"
@@ -55,13 +60,14 @@ class GeminiCloudFoodExtractor(
                 }
             }
 
-            if (lastError != null && isServiceUnavailable(lastError)) {
-                val localFallback = runCatching { generateWithLocalGemma(prompt) }
+            if (lastError != null) {
+                onStatus?.invoke("Gemini failed. Switching to local Gemma model...")
+                val localFallback = runCatching { generateWithLocalGemma(prompt, onStatus) }
                 localFallback.getOrNull()?.let { return@withContext it }
 
                 Log.e(
                     "GEMINI_RECIPE",
-                    "Gemini unavailable and local Gemma fallback failed.",
+                    "Gemini failed and local Gemma fallback failed.",
                     localFallback.exceptionOrNull()
                 )
             }
@@ -73,15 +79,20 @@ class GeminiCloudFoodExtractor(
         }
     }
 
-    private suspend fun generateWithLocalGemma(prompt: String): RecipeSuggestionResult {
+    private suspend fun generateWithLocalGemma(
+        prompt: String,
+        onStatus: ((String) -> Unit)?
+    ): RecipeSuggestionResult {
         val context = AppContextProvider.get()
             ?: error("Application context unavailable for local Gemma fallback")
 
         val gemmaManager = GemmaManager(context)
         try {
+            onStatus?.invoke("Loading local Gemma model...")
             val init = gemmaManager.ensureInitialized(enableImage = false)
             init.getOrElse { throw it }
 
+            onStatus?.invoke("Generating recipes with local Gemma...")
             val raw = gemmaManager.sendPrompt(prompt)
                 .getOrElse { throw it }
 

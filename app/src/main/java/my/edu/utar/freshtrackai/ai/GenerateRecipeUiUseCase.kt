@@ -10,7 +10,8 @@ internal class GenerateRecipeUiUseCase(
 ) {
     suspend fun generateFromInventory(
         inventory: List<InventoryItem>,
-        preferences: RecipePreferencesUi
+        preferences: RecipePreferencesUi,
+        onStatus: ((String) -> Unit)? = null
     ): List<RecipeUi> {
         val mappedInput = InventoryRecipeInputMapper.map(
             inventory = inventory,
@@ -18,7 +19,7 @@ internal class GenerateRecipeUiUseCase(
         )
 
         val summary = InventorySummaryBuilder.fromNames(mappedInput.itemNames)
-        val result = extractor.suggestRecipes(summary)
+        val result = extractor.suggestRecipes(summary, onStatus)
 
         return RecipeUiMapper.mapRecipes(
             recipes = result.recipes,
@@ -28,10 +29,11 @@ internal class GenerateRecipeUiUseCase(
 
     suspend fun generateFromItemNames(
         itemNames: List<String>,
-        selectedInventoryIds: Set<String> = emptySet()
+        selectedInventoryIds: Set<String> = emptySet(),
+        onStatus: ((String) -> Unit)? = null
     ): List<RecipeUi> {
         val summary = InventorySummaryBuilder.fromNames(itemNames)
-        val result = extractor.suggestRecipes(summary)
+        val result = extractor.suggestRecipes(summary, onStatus)
 
         return RecipeUiMapper.mapRecipes(
             recipes = result.recipes,

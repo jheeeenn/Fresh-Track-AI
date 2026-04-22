@@ -24,30 +24,39 @@ internal class RecipeGenerationViewModel(
             _uiState.value = RecipeGenerationUiState(
                 isLoading = false,
                 recipes = emptyList(),
-                errorMessage = "No inventory items available."
+                errorMessage = "No inventory items available.",
+                processingMessage = null
             )
             return
         }
 
         viewModelScope.launch {
-            _uiState.value = RecipeGenerationUiState(isLoading = true)
+            _uiState.value = RecipeGenerationUiState(
+                isLoading = true,
+                processingMessage = "Preparing inventory summary..."
+            )
 
             try {
                 val recipes = useCase.generateFromInventory(
                     inventory = inventory,
-                    preferences = preferences
+                    preferences = preferences,
+                    onStatus = { status ->
+                        _uiState.value = _uiState.value.copy(processingMessage = status)
+                    }
                 )
 
                 _uiState.value = RecipeGenerationUiState(
                     isLoading = false,
                     recipes = recipes,
-                    errorMessage = null
+                    errorMessage = null,
+                    processingMessage = null
                 )
             } catch (e: Exception) {
                 _uiState.value = RecipeGenerationUiState(
                     isLoading = false,
                     recipes = emptyList(),
-                    errorMessage = e.message ?: "Failed to generate recipes."
+                    errorMessage = e.message ?: "Failed to generate recipes.",
+                    processingMessage = null
                 )
             }
         }
