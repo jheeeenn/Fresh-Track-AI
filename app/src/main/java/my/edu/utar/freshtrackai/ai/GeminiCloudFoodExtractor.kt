@@ -27,7 +27,7 @@ class GeminiCloudFoodExtractor(
     override suspend fun suggestRecipes(inventorySummary: String): RecipeSuggestionResult {
         return withContext(Dispatchers.IO) {
             val url =
-                "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=$apiKey"
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
 
             val prompt = PromptFactory.recipePrompt(inventorySummary)
 
