@@ -358,3 +358,10 @@ private fun TestActionButton(
         }
     }
 }
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+fun PreviewNotificationTest() {
+    my.edu.utar.freshtrackai.ui.theme.FreshTrackAITheme {
+        NotificationTestScreen()
+    }
+}
