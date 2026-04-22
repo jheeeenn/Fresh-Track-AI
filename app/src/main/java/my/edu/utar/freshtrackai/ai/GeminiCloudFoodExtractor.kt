@@ -28,7 +28,7 @@ class GeminiCloudFoodExtractor(
             val maxAttempts = 3
             var lastError: Throwable? = null
 
-            repeat(maxAttempts) { attempt ->
+            for (attempt in 0 until maxAttempts) {
                 try {
                     val response = generativeModel.generateContent(prompt)
                     val text = response.text.orEmpty().trim()
