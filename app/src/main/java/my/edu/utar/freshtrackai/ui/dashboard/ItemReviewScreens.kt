@@ -44,6 +44,14 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +71,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AddMissingItemScreen(
     draft: AddItemFormDraft,
@@ -74,6 +83,7 @@ internal fun AddMissingItemScreen(
     onTabSelected: (RootTab) -> Unit
 ) {
     var categoryExpanded by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
     val canSubmit = draft.name.isNotBlank()
 
     Scaffold(
@@ -224,16 +234,20 @@ internal fun AddMissingItemScreen(
                                 }
                             }
                         }
-                        OutlinedTextField(
-                            value = draft.expiryDate,
-                            onValueChange = { onDraftChange(draft.copy(expiryDate = it)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Expiry Date") },
-                            placeholder = { Text("e.g. Oct 24, 2026") },
-                            leadingIcon = { Icon(Icons.Outlined.DateRange, contentDescription = null, tint = Slate600) },
-                            colors = freshOutlinedTextFieldColors(),
-                            singleLine = true
-                        )
+                        OutlinedButton(
+                            onClick = { showDatePicker = true },
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, Gray200),
+                            modifier = Modifier.fillMaxWidth().height(56.dp)
+                        ) {
+                            Icon(Icons.Outlined.DateRange, contentDescription = null, tint = Slate600)
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = draft.expiryDate.ifBlank { "Select Expiry Date" },
+                                color = Slate900,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
             }
@@ -279,6 +293,31 @@ internal fun AddMissingItemScreen(
                     }
                 }
             }
+        }
+    }
+
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState()
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val formatted = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(millis))
+                        onDraftChange(draft.copy(expiryDate = formatted))
+                    }
+                    showDatePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }

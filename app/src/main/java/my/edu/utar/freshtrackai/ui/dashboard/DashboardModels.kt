@@ -1,4 +1,4 @@
-﻿package my.edu.utar.freshtrackai.ui.dashboard
+package my.edu.utar.freshtrackai.ui.dashboard
 
 import android.net.Uri
 import androidx.compose.ui.graphics.Color
@@ -38,7 +38,9 @@ internal data class InventoryItem(
     val quantityLabel: String,
     val addedDaysAgo: Int,
     val expiresInDays: Int,
-    val thumbnailRef: String
+    val thumbnailRef: String,
+    val nutritionNotes: String = "",
+    val formattedExpiryDate: String = ""
 )
 
 internal data class ExpiringItem(
