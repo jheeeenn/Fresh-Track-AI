@@ -188,22 +188,25 @@ internal fun AddMissingItemScreen(
                             )
 
                             Box(modifier = Modifier.weight(1f)) {
-                                OutlinedButton(
-                                    onClick = { categoryExpanded = true },
-                                    shape = RoundedCornerShape(12.dp),
-                                    border = BorderStroke(1.dp, Gray200),
+                                OutlinedTextField(
+                                    value = "${categoryEmoji(draft.category)} ${draft.category.label}",
+                                    onValueChange = {},
+                                    modifier = Modifier.fillMaxWidth(),
+                                    label = { Text("Category") },
+                                    readOnly = true,
+                                    trailingIcon = {
+                                        IconButton(onClick = { categoryExpanded = true }) {
+                                            Text("▾", color = Slate600, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                                        }
+                                    },
+                                    colors = freshOutlinedTextFieldColors()
+                                )
+
+                                Box(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(56.dp)
-                                ) {
-                                    Text(
-                                        text = "${categoryEmoji(draft.category)} ${draft.category.label}",
-                                        color = Slate900,
-                                        modifier = Modifier.weight(1f),
-                                        maxLines = 1
-                                    )
-                                    Text("▾", color = Slate600, fontWeight = FontWeight.Bold)
-                                }
+                                        .matchParentSize()
+                                        .clickable { categoryExpanded = true }
+                                )
 
                                 DropdownMenu(
                                     expanded = categoryExpanded,
