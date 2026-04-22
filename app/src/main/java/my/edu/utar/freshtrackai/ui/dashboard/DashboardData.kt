@@ -1,4 +1,4 @@
-﻿package my.edu.utar.freshtrackai.ui.dashboard
+package my.edu.utar.freshtrackai.ui.dashboard
 
 import androidx.compose.ui.graphics.Color
 import java.util.UUID
@@ -134,15 +134,47 @@ internal fun seedReviewItems(): List<ReviewItemUi> = listOf(
     )
 )
 
-internal fun ReviewItemUi.toInventoryItem(): InventoryItem = InventoryItem(
-    id = "it-${UUID.randomUUID().toString().take(8)}",
-    name = name,
-    category = category,
-    quantityLabel = quantityLabel,
-    addedDaysAgo = 0,
-    expiresInDays = expiresInDays,
-    thumbnailRef = thumbnailRef
-)
+internal fun ReviewItemUi.toInventoryItem(): my.edu.utar.freshtrackai.data.local.entity.InventoryItem {
+    val expiryMillis = System.currentTimeMillis() + (this.expiresInDays * 24L * 60 * 60 * 1000L)
+    val qtyData = parseQuantity(this.quantityLabel)
+    return my.edu.utar.freshtrackai.data.local.entity.InventoryItem(
+        name = this.name,
+        category = this.category.name,
+        quantity = qtyData.first,
+        unit = qtyData.second,
+        expiryDate = expiryMillis
+    )
+}
+
+internal fun my.edu.utar.freshtrackai.data.local.entity.InventoryItem.toUiModel(): InventoryItem {
+    val currentMillis = System.currentTimeMillis()
+    val diff = this.expiryDate - currentMillis
+    val days = (diff / (1000 * 60 * 60 * 24)).toInt()
+    
+    val addedDiff = currentMillis - this.purchaseDate
+    val addedDays = (addedDiff / (1000 * 60 * 60 * 24)).toInt().coerceAtLeast(0)
+    
+    val cat = InventoryCategory.values().firstOrNull { it.name.equals(this.category, ignoreCase = true) } ?: InventoryCategory.Other
+    
+    return InventoryItem(
+        id = this.itemId.toString(),
+        name = this.name,
+        category = cat,
+        quantityLabel = if (this.quantity % 1.0 == 0.0) "${this.quantity.toInt()} ${this.unit}" else "${this.quantity} ${this.unit}",
+        addedDaysAgo = addedDays,
+        expiresInDays = days,
+        thumbnailRef = this.name.lowercase().replace(" ", "_")
+    )
+}
+
+internal fun parseQuantity(value: String): Pair<Double, String> {
+    val digitsStr = value.takeWhile { it.isDigit() || it == '.' }
+    val digits = digitsStr.toDoubleOrNull() ?: 1.0
+    val letters = value.dropWhile { it.isDigit() || it == '.' || it.isWhitespace() }.trim()
+    val finalUnit = if (letters.isEmpty()) "unit" else letters
+    return digits to finalUnit
+}
+
 
 internal fun ReviewItemUi.toDraft(): AddItemFormDraft = AddItemFormDraft(
     name = name,
@@ -214,7 +246,7 @@ internal suspend fun draftToReviewItem(
 // ─────────────────────────────────────────────────────────────
 // UPDATED: Now a suspend function that asks AI for exact days!
 // ─────────────────────────────────────────────────────────────
-internal suspend fun draftToInventoryItem(draft: AddItemFormDraft): InventoryItem {
+internal suspend fun draftToInventoryItem(draft: AddItemFormDraft): my.edu.utar.freshtrackai.data.local.entity.InventoryItem {
     val resolvedName = draft.name.trim().ifBlank { "Unnamed Item" }
     val finalCategory = draft.category
 
@@ -228,14 +260,15 @@ internal suspend fun draftToInventoryItem(draft: AddItemFormDraft): InventoryIte
         ExpiryCalculator.estimateExpiresInDays(draft.expiryDate).toInt()
     }
 
-    return InventoryItem(
-        id = "it-${UUID.randomUUID().toString().take(8)}",
+    val expiryMillis = System.currentTimeMillis() + (resolvedDays * 24L * 60 * 60 * 1000L)
+    val qtyData = parseQuantity(draft.quantity.trim().ifBlank { "1 unit" })
+
+    return my.edu.utar.freshtrackai.data.local.entity.InventoryItem(
         name = resolvedName,
-        category = finalCategory,
-        quantityLabel = draft.quantity.trim().ifBlank { "1 unit" },
-        addedDaysAgo = 0,
-        expiresInDays = resolvedDays,
-        thumbnailRef = resolvedName.lowercase().replace(" ", "_")
+        category = finalCategory.name,
+        quantity = qtyData.first,
+        unit = qtyData.second,
+        expiryDate = expiryMillis
     )
 }
 

@@ -1,4 +1,4 @@
-﻿package my.edu.utar.freshtrackai.ui.dashboard
+package my.edu.utar.freshtrackai.ui.dashboard
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -50,7 +50,15 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
     var isSaving by remember { mutableStateOf(false) }
 
     var screen by rememberSaveable { mutableStateOf(WiseScreen.AppLauncher) }
-    val inventory = remember { mutableStateListOf<InventoryItem>().apply { addAll(seedInventoryItems()) } }
+    
+    val inventoryVm: my.edu.utar.freshtrackai.ui.inventory.InventoryViewModel = viewModel(
+        factory = my.edu.utar.freshtrackai.ui.inventory.InventoryViewModel.Factory(LocalContext.current.applicationContext)
+    )
+    val dbItems by inventoryVm.allItems.collectAsState()
+    
+    val inventory = remember(dbItems) { 
+        mutableStateListOf<InventoryItem>().apply { addAll(dbItems.map { it.toUiModel() }) } 
+    }
     val reviewItems = remember { mutableStateListOf<ReviewItemUi>().apply { addAll(seedReviewItems()) } }
     val recipesAll = remember { seedRecipes() }
     val recipeRecommendations = remember { mutableStateListOf<RecipeUi>() }
@@ -161,7 +169,9 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                 onSearchQueryChange = { expiringSearch = it },
                 onCategoryChange = { expiringFilter = it },
                 onRecipe = { screen = WiseScreen.AiRecipes },
-                onMarkUsed = { inventoryId -> removeInventoryItem(inventory, inventoryId) },
+                onMarkUsed = { inventoryId -> 
+                    inventoryId.toLongOrNull()?.let { inventoryVm.deleteItemById(it) }
+                },
                 onBack = { screen = WiseScreen.MainDashboard },
                 onTabSelected = toRootTab
             )
@@ -257,17 +267,14 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                                 }
                                 AddItemOrigin.Dashboard -> {
                                     if (editingInventoryItemId != null) {
-                                        val idx = inventory.indexOfFirst { it.id == editingInventoryItemId }
-                                        if (idx >= 0) {
-                                            val updated = draftToInventoryItem(addFormDraft).copy(
-                                                id = editingInventoryItemId!!,
-                                                addedDaysAgo = inventory[idx].addedDaysAgo
-                                            )
-                                            inventory[idx] = updated
+                                        val numId = editingInventoryItemId!!.toLongOrNull()
+                                        if (numId != null) {
+                                            val updated = draftToInventoryItem(addFormDraft).copy(itemId = numId)
+                                            inventoryVm.confirmAndEditItem(updated, updated.quantity, updated.expiryDate, updated.notes)
                                             toastMessage = "Food details updated."
                                         }
                                     } else {
-                                        inventory.add(draftToInventoryItem(addFormDraft))
+                                        inventoryVm.insertItem(draftToInventoryItem(addFormDraft))
                                         toastMessage = "Item added to inventory."
                                     }
                                     addFormDraft = AddItemFormDraft()
@@ -315,7 +322,7 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                 },
                 onSaveToInventory = {
                     if (reviewItems.isNotEmpty()) {
-                        inventory.addAll(reviewItems.map { it.toInventoryItem() })
+                        inventoryVm.insertBulk(reviewItems.map { it.toInventoryItem() })
                         val savedCount = reviewItems.size
                         reviewItems.clear()
                         toastMessage = "$savedCount item(s) saved to inventory."

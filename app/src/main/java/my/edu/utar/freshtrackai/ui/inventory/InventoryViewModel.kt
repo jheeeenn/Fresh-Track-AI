@@ -5,9 +5,14 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import my.edu.utar.freshtrackai.data.local.entity.InventoryItem
 import my.edu.utar.freshtrackai.data.repository.InventoryRepository
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
+import my.edu.utar.freshtrackai.data.local.AppDatabase
+import android.content.Context
 
 class InventoryViewModel(
     private val repository: InventoryRepository
@@ -57,6 +62,10 @@ class InventoryViewModel(
             repository.updateItem(updatedItem)
         }
     }
+    
+    fun insertItem(item: InventoryItem) {
+        viewModelScope.launch { repository.insertItem(item) }
+    }
 
     // Item delete flow
     fun deleteItem(item: InventoryItem) {
@@ -74,6 +83,33 @@ class InventoryViewModel(
             expiryDate <= currentTime -> "EXPIRED"
             expiryDate - currentTime <= threeDaysInMillis -> "EXPIRING_SOON"
             else -> "FRESH"
+        }
+    }
+
+    fun deleteItemById(itemId: Long) {
+        viewModelScope.launch {
+            val item = repository.getItemById(itemId).firstOrNull()
+            if (item != null) {
+                repository.deleteItem(item)
+            }
+        }
+    }
+
+    fun insertBulk(items: List<InventoryItem>) {
+        viewModelScope.launch {
+            items.forEach { repository.insertItem(it) }
+        }
+    }
+
+    class Factory(private val context: Context) : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+            if (modelClass.isAssignableFrom(InventoryViewModel::class.java)) {
+                @Suppress("UNCHECKED_CAST")
+                return InventoryViewModel(
+                    InventoryRepository(AppDatabase.getDatabase(context).inventoryDao())
+                ) as T
+            }
+            throw IllegalArgumentException("Unknown ViewModel class")
         }
     }
 }
