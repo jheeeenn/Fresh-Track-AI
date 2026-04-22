@@ -2,12 +2,12 @@ package my.edu.utar.freshtrackai.ai
 
 import android.util.Log
 import com.google.ai.client.generativeai.GenerativeModel
+import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import my.edu.utar.freshtrackai.ai.model.RecipeSuggestionResult
 import my.edu.utar.freshtrackai.ai.util.PromptFactory
-import com.google.gson.Gson
 
 class GeminiCloudFoodExtractor(
     private val apiKey: String
@@ -37,24 +37,16 @@ class GeminiCloudFoodExtractor(
                         error("Gemini returned an empty response")
                     }
 
-                    val cleanedJson = text
-                        .removePrefix("```json")
-                        .removePrefix("```")
-                        .removeSuffix("```")
-                        .trim()
-
-                    return@withContext gson.fromJson(cleanedJson, RecipeSuggestionResult::class.java)
+                    return@withContext parseRecipeJson(text)
                 } catch (t: Throwable) {
                     lastError = t
-                    val errorMessage = t.message.orEmpty()
-                    val isServiceUnavailable =
-                        errorMessage.contains("503") || errorMessage.contains("UNAVAILABLE", ignoreCase = true)
 
-                    if (!isServiceUnavailable || attempt == maxAttempts - 1) {
+                    val shouldRetry = isServiceUnavailable(t) && attempt < maxAttempts - 1
+                    if (!shouldRetry) {
                         break
                     }
 
-                    val backoffMillis = (1000L * (attempt + 1))
+                    val backoffMillis = 1000L * (attempt + 1)
                     Log.w(
                         "GEMINI_RECIPE",
                         "Gemini temporarily unavailable (attempt ${attempt + 1}/$maxAttempts). Retrying in ${backoffMillis}ms"
@@ -63,10 +55,56 @@ class GeminiCloudFoodExtractor(
                 }
             }
 
+            if (lastError != null && isServiceUnavailable(lastError)) {
+                val localFallback = runCatching { generateWithLocalGemma(prompt) }
+                localFallback.getOrNull()?.let { return@withContext it }
+
+                Log.e(
+                    "GEMINI_RECIPE",
+                    "Gemini unavailable and local Gemma fallback failed.",
+                    localFallback.exceptionOrNull()
+                )
+            }
+
             throw IllegalStateException(
                 "Failed to generate recipe suggestions after retries.",
                 lastError
             )
         }
+    }
+
+    private suspend fun generateWithLocalGemma(prompt: String): RecipeSuggestionResult {
+        val context = AppContextProvider.get()
+            ?: error("Application context unavailable for local Gemma fallback")
+
+        val gemmaManager = GemmaManager(context)
+        try {
+            val init = gemmaManager.ensureInitialized(enableImage = false)
+            init.getOrElse { throw it }
+
+            val raw = gemmaManager.sendPrompt(prompt)
+                .getOrElse { throw it }
+
+            return parseRecipeJson(raw)
+        } finally {
+            gemmaManager.close()
+        }
+    }
+
+    private fun parseRecipeJson(rawText: String): RecipeSuggestionResult {
+        val cleanedJson = rawText
+            .trim()
+            .removePrefix("```json")
+            .removePrefix("```")
+            .removeSuffix("```")
+            .trim()
+
+        return gson.fromJson(cleanedJson, RecipeSuggestionResult::class.java)
+    }
+
+    private fun isServiceUnavailable(throwable: Throwable): Boolean {
+        val errorMessage = throwable.message.orEmpty()
+        return errorMessage.contains("503") ||
+            errorMessage.contains("UNAVAILABLE", ignoreCase = true)
     }
 }
