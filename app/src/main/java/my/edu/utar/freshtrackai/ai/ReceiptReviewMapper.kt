@@ -14,8 +14,8 @@ internal object ReceiptReviewMapper {
 
     private fun ReceiptItemDto.toReviewItem(): ReviewItemUi {
         val resolvedCategory = mapCategory(category)
-        val resolvedDays = estimateExpiryDays(resolvedCategory)
-        val resolvedQuantity = buildQuantityLabel(quantity, unit)
+        val resolvedDays = expiry?.estimatedShelfLifeDays ?: estimateExpiryDays(resolvedCategory)
+        val resolvedQuantity = buildQuantityLabel(quantity?.raw, quantity?.value, quantity?.unit)
 
         return ReviewItemUi(
             id = "rev-${UUID.randomUUID().toString().take(8)}",
@@ -29,13 +29,17 @@ internal object ReceiptReviewMapper {
         )
     }
 
-    private fun buildQuantityLabel(quantity: String?, unit: String?): String {
-        val q = quantity?.trim().orEmpty()
-        val u = unit?.trim().orEmpty()
+    private fun buildQuantityLabel(raw: String?, value: Double?, unit: String?): String {
+        val parsedRaw = raw?.trim().orEmpty()
+        val parsedUnit = unit?.trim().orEmpty()
+        val parsedValue = value?.let {
+            if (it % 1.0 == 0.0) it.toInt().toString() else it.toString()
+        }.orEmpty()
 
         return when {
-            q.isNotBlank() && u.isNotBlank() -> "$q $u"
-            q.isNotBlank() -> q
+            parsedRaw.isNotBlank() -> parsedRaw
+            parsedValue.isNotBlank() && parsedUnit.isNotBlank() -> "$parsedValue $parsedUnit"
+            parsedValue.isNotBlank() -> parsedValue
             else -> "1 unit"
         }
     }

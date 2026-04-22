@@ -10,17 +10,38 @@ internal object FoodReviewMapper {
     fun map(result: FoodDetectionResult): List<ReviewItemUi> {
         return result.items.map { item ->
             val category = mapCategory(item.category)
+            val quantityLabel = resolveQuantityLabel(
+                raw = item.quantity?.raw,
+                value = item.quantity?.value,
+                unit = item.quantity?.unit
+            )
+            val expiryDays = item.expiry?.estimatedShelfLifeDays ?: estimateExpiryDays(category)
 
             ReviewItemUi(
                 id = "food-${UUID.randomUUID().toString().take(8)}",
                 name = item.name.ifBlank { "Unknown Item" },
                 category = category,
-                quantityLabel = "Detected item",
-                expiresLabel = "Estimate after review",
-                expiresInDays = estimateExpiryDays(category),
+                quantityLabel = quantityLabel,
+                expiresLabel = "Estimated ${expiryDays}d",
+                expiresInDays = expiryDays,
                 nutritionLabel = "AI food scan",
-                thumbnailRef = item.name.lowercase().replace(" ", "_")
+                thumbnailRef = item.name.ifBlank { "item" }.lowercase().replace(" ", "_")
             )
+        }
+    }
+
+    private fun resolveQuantityLabel(raw: String?, value: Double?, unit: String?): String {
+        val parsedRaw = raw?.trim().orEmpty()
+        val parsedUnit = unit?.trim().orEmpty()
+        val parsedValue = value?.let {
+            if (it % 1.0 == 0.0) it.toInt().toString() else it.toString()
+        }.orEmpty()
+
+        return when {
+            parsedRaw.isNotBlank() -> parsedRaw
+            parsedValue.isNotBlank() && parsedUnit.isNotBlank() -> "$parsedValue $parsedUnit"
+            parsedValue.isNotBlank() -> parsedValue
+            else -> "Detected item"
         }
     }
 

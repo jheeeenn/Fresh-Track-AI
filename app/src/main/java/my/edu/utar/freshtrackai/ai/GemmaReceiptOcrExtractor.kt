@@ -2,11 +2,9 @@ package my.edu.utar.freshtrackai.ai
 
 import android.content.Context
 import android.graphics.Bitmap
-import com.google.ai.edge.litertlm.Content
-import com.google.ai.edge.litertlm.Contents
 import com.google.gson.Gson
 import my.edu.utar.freshtrackai.ai.model.ReceiptParseResult
-import java.io.ByteArrayOutputStream
+import my.edu.utar.freshtrackai.ai.util.PromptFactory
 
 internal class GemmaReceiptOcrExtractor(
     context: Context
@@ -19,41 +17,7 @@ internal class GemmaReceiptOcrExtractor(
         val init = gemmaManager.ensureInitialized(enableImage = true)
         init.getOrElse { throw it }
 
-        val prompt = """
-You are reading a grocery receipt image.
-
-Task:
-Extract only item names that are visibly printed on the receipt.
-Do not guess.
-Do not infer missing items.
-If text is unclear, skip it.
-
-Return STRICT JSON only in this format:
-{
-  "items": [
-    {
-      "name": "Strawberries",
-      "category": "Fruit",
-      "quantity": null,
-      "unit": null,
-      "confidence": 0.82
-    }
-  ]
-}
-
-Rules:
-- Extract only grocery or food-related line items that are clearly visible
-- Ignore subtotal, total, tax, cashier name, store info, codes, prices, and payment text
-- Ignore non-food items
-- If no food items are readable, return:
-  {"items":[]}
-- category must be one of:
-  Dairy, Fruit, Vegetable, Meat, Beverage, Pantry, Snack, Other
-- quantity and unit should usually be null unless explicitly shown in the line item
-- confidence should be lower when text is uncertain
-- Return only JSON
-- Do not wrap the JSON in markdown
-""".trimIndent()
+        val prompt = PromptFactory.receiptOcrPrompt()
 
         val raw = gemmaManager.sendImagePrompt(bitmap, prompt)
             .getOrElse { throw it }

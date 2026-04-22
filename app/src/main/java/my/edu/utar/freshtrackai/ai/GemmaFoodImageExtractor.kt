@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.util.Log
 import com.google.gson.Gson
 import my.edu.utar.freshtrackai.ai.model.FoodDetectionResult
+import my.edu.utar.freshtrackai.ai.util.PromptFactory
 
 internal class GemmaFoodImageExtractor(
     context: Context
@@ -17,35 +18,7 @@ internal class GemmaFoodImageExtractor(
         val init = gemmaManager.ensureInitialized(enableImage = true)
         init.getOrElse { throw it }
 
-        val prompt = """
-You are identifying visible food items from an image.
-
-Task:
-Detect only food or drink items that are clearly visible in the image.
-Do not guess.
-Do not infer hidden items.
-If uncertain, skip the item.
-
-Return STRICT JSON only in this format:
-{
-  "items": [
-    {
-      "name": "<visible food item>",
-      "category": "Other",
-      "confidence": 0.50
-    }
-  ]
-}
-
-Rules:
-- Include only visible food or drink items
-- Ignore plates, table, hands, background, containers unless the food itself is visible
-- If no food items are clearly visible, return {"items":[]}
-- category must be one of:
-  Dairy, Fruit, Vegetable, Meat, Beverage, Pantry, Snack, Other
-- Return only JSON
-- Do not wrap the JSON in markdown
-""".trimIndent()
+        val prompt = PromptFactory.foodImageOcrPrompt()
 
         val raw = gemmaManager.sendImagePrompt(bitmap, prompt)
             .getOrElse { throw it }
