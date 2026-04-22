@@ -30,9 +30,12 @@ class GeminiCloudFoodExtractor(
             val prompt = PromptFactory.recipePrompt(inventorySummary)
             val maxAttempts = 3
             var lastError: Throwable? = null
+            var geminiAttempts = 0
 
             for (attempt in 0 until maxAttempts) {
                 try {
+                    geminiAttempts += 1
+                    Log.d("GEMINI_RECIPE", "Calling Gemini attempt ${attempt + 1}/$maxAttempts")
                     onStatus?.invoke("Generating recipes with Gemini (${attempt + 1}/$maxAttempts)...")
                     val response = generativeModel.generateContent(prompt)
                     val text = response.text.orEmpty().trim()
@@ -41,9 +44,11 @@ class GeminiCloudFoodExtractor(
                         error("Gemini returned an empty response")
                     }
 
+                    Log.d("GEMINI_RECIPE", "Gemini recipe generation succeeded")
                     return@withContext parseRecipeJson(text)
                 } catch (t: Throwable) {
                     lastError = t
+                    Log.w("GEMINI_RECIPE", "Gemini attempt ${attempt + 1} failed", t)
 
                     val shouldRetry = isServiceUnavailable(t) && attempt < maxAttempts - 1
                     if (!shouldRetry) {
@@ -60,7 +65,7 @@ class GeminiCloudFoodExtractor(
                 }
             }
 
-            if (lastError != null) {
+            if (geminiAttempts > 0 && lastError != null) {
                 onStatus?.invoke("Gemini failed. Switching to local Gemma model...")
                 val localFallback = runCatching { generateWithLocalGemma(prompt, onStatus) }
                 localFallback.getOrNull()?.let { return@withContext it }
