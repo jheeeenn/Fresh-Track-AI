@@ -8,12 +8,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import my.edu.utar.freshtrackai.ui.dashboard.InventoryItem
 import my.edu.utar.freshtrackai.ui.dashboard.RecipePreferencesUi
+import my.edu.utar.freshtrackai.ui.dashboard.RecipeUi
 
 internal class RecipeGenerationViewModel(
     private val useCase: GenerateRecipeUiUseCase = GenerateRecipeUiUseCase()
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(RecipeGenerationUiState())
+    companion object {
+        private var cachedRecipes: List<RecipeUi> = emptyList()
+    }
+
+    private val _uiState = MutableStateFlow(
+        RecipeGenerationUiState(recipes = cachedRecipes)
+    )
     val uiState: StateFlow<RecipeGenerationUiState> = _uiState.asStateFlow()
 
     fun generateRecipes(
@@ -21,9 +28,8 @@ internal class RecipeGenerationViewModel(
         preferences: RecipePreferencesUi
     ) {
         if (inventory.isEmpty()) {
-            _uiState.value = RecipeGenerationUiState(
+            _uiState.value = _uiState.value.copy(
                 isLoading = false,
-                recipes = emptyList(),
                 errorMessage = "No inventory items available.",
                 processingMessage = null
             )
@@ -31,8 +37,9 @@ internal class RecipeGenerationViewModel(
         }
 
         viewModelScope.launch {
-            _uiState.value = RecipeGenerationUiState(
+            _uiState.value = _uiState.value.copy(
                 isLoading = true,
+                errorMessage = null,
                 processingMessage = "Preparing inventory summary..."
             )
 
@@ -45,6 +52,7 @@ internal class RecipeGenerationViewModel(
                     }
                 )
 
+                cachedRecipes = recipes
                 _uiState.value = RecipeGenerationUiState(
                     isLoading = false,
                     recipes = recipes,
@@ -52,9 +60,8 @@ internal class RecipeGenerationViewModel(
                     processingMessage = null
                 )
             } catch (e: Exception) {
-                _uiState.value = RecipeGenerationUiState(
+                _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    recipes = emptyList(),
                     errorMessage = e.message ?: "Failed to generate recipes.",
                     processingMessage = null
                 )

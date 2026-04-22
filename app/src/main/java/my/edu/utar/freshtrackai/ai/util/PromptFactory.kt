@@ -15,7 +15,7 @@ internal object PromptFactory {
 You are a recipe assistant.
 
 Task:
-- Propose 3 practical recipes using the provided inventory.
+- Propose exactly 2 practical recipes using the provided inventory.
 - Prefer recipes that consume soon-to-expire ingredients first.
 - Keep recipes simple for home cooking.
 
