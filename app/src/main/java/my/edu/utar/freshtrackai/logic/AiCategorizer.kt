@@ -8,7 +8,7 @@ import my.edu.utar.freshtrackai.BuildConfig
 
 object AiCategorizer {
 
-    private val API_KEY = BuildConfig.GEMINI_API_KEY
+    private val API_KEY = BuildConfig.API_KEY
 
     private val generativeModel by lazy {
         GenerativeModel(

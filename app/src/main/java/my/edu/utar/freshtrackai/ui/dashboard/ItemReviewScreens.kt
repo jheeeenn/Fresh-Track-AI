@@ -1,8 +1,15 @@
 package my.edu.utar.freshtrackai.ui.dashboard
 
 import androidx.compose.foundation.background
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -71,7 +78,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 internal fun AddMissingItemScreen(
     draft: AddItemFormDraft,
@@ -85,6 +92,8 @@ internal fun AddMissingItemScreen(
     var categoryExpanded by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
     val canSubmit = draft.name.isNotBlank()
+    val coroutineScope = rememberCoroutineScope()
+    var showDatePicker by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = { DashboardTopBar() },
