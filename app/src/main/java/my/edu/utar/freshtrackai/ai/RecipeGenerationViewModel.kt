@@ -10,11 +10,16 @@ import my.edu.utar.freshtrackai.ui.dashboard.InventoryItem
 import my.edu.utar.freshtrackai.ui.dashboard.RecipePreferencesUi
 import my.edu.utar.freshtrackai.ui.dashboard.RecipeUi
 
+/**
+ * Manages recipe generation state for the UI.
+ * It handles loading, progress updates, results, and error messages.
+ */
 internal class RecipeGenerationViewModel(
     private val useCase: GenerateRecipeUiUseCase = GenerateRecipeUiUseCase()
 ) : ViewModel() {
 
     companion object {
+        // Keeps the last generated recipes so they survive simple ViewModel recreation.
         private var cachedRecipes: List<RecipeUi> = emptyList()
     }
 
@@ -23,6 +28,7 @@ internal class RecipeGenerationViewModel(
     )
     val uiState: StateFlow<RecipeGenerationUiState> = _uiState.asStateFlow()
 
+    // Starts recipe generation using the current inventory and preferences.
     fun generateRecipes(
         inventory: List<InventoryItem>,
         preferences: RecipePreferencesUi
@@ -67,8 +73,10 @@ internal class RecipeGenerationViewModel(
                 )
             }
         }
+
     }
 
+    // Clears the current error message after it has been shown to the user.
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
     }

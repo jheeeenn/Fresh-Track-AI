@@ -9,6 +9,12 @@ import kotlinx.coroutines.withContext
 import my.edu.utar.freshtrackai.ai.model.RecipeSuggestionResult
 import my.edu.utar.freshtrackai.ai.util.PromptFactory
 
+
+/**
+ * Uses Gemini to generate recipe suggestions from the current inventory.
+ * If Gemini is temporarily unavailable, it retries and can fall back to local Gemma.
+ */
+
 class GeminiCloudFoodExtractor(
     private val apiKey: String
 ) : CloudFoodExtractor {
@@ -65,17 +71,17 @@ class GeminiCloudFoodExtractor(
                 }
             }
 
-            if (geminiAttempts > 0 && lastError != null) {
-                onStatus?.invoke("Gemini failed. Switching to local Gemma model...")
-                val localFallback = runCatching { generateWithLocalGemma(prompt, onStatus) }
-                localFallback.getOrNull()?.let { return@withContext it }
+            // Fallback to local Gemma if Gemini failed after retry attempts.
+            //
+            onStatus?.invoke("Gemini failed. Switching to local Gemma model...")
+            val localFallback = runCatching { generateWithLocalGemma(prompt, onStatus) }
+            localFallback.getOrNull()?.let { return@withContext it }
 
-                Log.e(
-                    "GEMINI_RECIPE",
-                    "Gemini failed and local Gemma fallback failed.",
-                    localFallback.exceptionOrNull()
-                )
-            }
+            Log.e(
+                "GEMINI_RECIPE",
+                "Gemini failed and local Gemma fallback failed.",
+                localFallback.exceptionOrNull()
+            )
 
             throw IllegalStateException(
                 "Failed to generate recipe suggestions after retries.",
@@ -84,6 +90,7 @@ class GeminiCloudFoodExtractor(
         }
     }
 
+    // Generates recipes locally when the cloud service is unavailable.
     private suspend fun generateWithLocalGemma(
         prompt: String,
         onStatus: ((String) -> Unit)?
@@ -107,6 +114,7 @@ class GeminiCloudFoodExtractor(
         }
     }
 
+    // Cleans and parses the JSON returned by the model.
     private fun parseRecipeJson(rawText: String): RecipeSuggestionResult {
         val cleanedJson = rawText
             .trim()
@@ -118,6 +126,7 @@ class GeminiCloudFoodExtractor(
         return gson.fromJson(cleanedJson, RecipeSuggestionResult::class.java)
     }
 
+    // Checks whether the error is a temporary service-side availability issue --> error 503.
     private fun isServiceUnavailable(throwable: Throwable): Boolean {
         val errorMessage = throwable.message.orEmpty()
         return errorMessage.contains("503") ||

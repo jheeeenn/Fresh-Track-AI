@@ -7,6 +7,11 @@ import com.google.gson.Gson
 import my.edu.utar.freshtrackai.ai.model.FoodDetectionResult
 import my.edu.utar.freshtrackai.ai.util.PromptFactory
 
+/**
+ * Uses the local Gemma model to detect visible food items from an image.
+ * The model response is parsed into structured food detection results.
+ */
+
 internal class GemmaFoodImageExtractor(
     context: Context
 ) : FoodImageExtractor {
@@ -29,6 +34,7 @@ internal class GemmaFoodImageExtractor(
         return gson.fromJson(cleaned, FoodDetectionResult::class.java)
     }
 
+    // Removes optional markdown fences before JSON parsing.
     private fun extractJson(raw: String): String {
         val trimmed = raw.trim()
 

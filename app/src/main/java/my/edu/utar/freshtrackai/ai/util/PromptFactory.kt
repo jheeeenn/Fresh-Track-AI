@@ -1,16 +1,24 @@
 package my.edu.utar.freshtrackai.ai.util
 
+/**
+ * Stores reusable prompt templates for cloud and local AI features.
+ * This keeps prompt text separate from extractor and networking logic.
+ */
+
 internal object PromptFactory {
 
+    // Category labels expected by the AI response.
     private const val SUPPORTED_CATEGORIES =
         "Dairy, Fruit, Vegetable, Meat, Seafood, Beverage, Bakery, Pantry, Snack, Frozen, Canned, Condiment, Grains, Eggs, Leftover, Other"
 
+    // Shared output rules to keep responses machine-readable.
     private const val JSON_ONLY_RULES = """
 - Return valid JSON only
 - Do not include markdown fences
 - Do not include explanations or extra keys
 """
 
+    // Prompt used for Gemini recipe generation.
     fun recipePrompt(inventorySummary: String): String = """
 You are a recipe assistant.
 
@@ -51,6 +59,7 @@ Rules:
 - instructions must be concise and actionable.
 """.trimIndent()
 
+    // Prompt used for food image analysis with Gemma.
     fun foodImageOcrPrompt(): String = """
 You are identifying visible food items from an image.
 
@@ -93,6 +102,7 @@ Rules:
 $JSON_ONLY_RULES
 """.trimIndent()
 
+    // Prompt used for receipt OCR with Gemma.
     fun receiptOcrPrompt(): String = """
 You are reading a grocery receipt image.
 

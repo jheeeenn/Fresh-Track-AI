@@ -1,9 +1,11 @@
 package my.edu.utar.freshtrackai.ai.model
 
+// Root result returned by receipt parsing
 data class FoodDetectionResult(
     val items: List<FoodItemDto> = emptyList()
 )
 
+// One detected food item from the scanned image
 data class FoodItemDto(
     val name: String = "",
     val category: String? = null,
@@ -12,18 +14,14 @@ data class FoodItemDto(
     val confidence: Double? = null
 )
 
-/**
- * Common quantity structure used by image and receipt OCR.
- */
+// Shared quantity structure for OCR and image detection
 data class QuantityDto(
     val value: Double? = null,
     val unit: String? = null,
     val raw: String? = null
 )
 
-/**
- * Optional expiry metadata extracted from OCR or estimated by the model.
- */
+// Shared expiry information for OCR and image detection
 data class ExpiryInfoDto(
     val date: String? = null,
     val dateFormat: String? = null,

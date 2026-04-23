@@ -5,8 +5,13 @@ import my.edu.utar.freshtrackai.ui.dashboard.RecipeIngredientUi
 import my.edu.utar.freshtrackai.ui.dashboard.RecipeUi
 import java.util.UUID
 
-internal object RecipeUiMapper {
+/**
+ * Converts recipe DTO models into UI models.
+ * This keeps API response structures separate from screen-ready data.
+ */
 
+internal object RecipeUiMapper {
+    // Maps all generated recipes into UI models.
     internal fun mapRecipes(
         recipes: List<RecipeDto>,
         selectedInventoryIds: Set<String> = emptySet()
@@ -18,7 +23,7 @@ internal object RecipeUiMapper {
             )
         }
     }
-
+    // Converts one recipe DTO into a RecipeUi object.
     private fun RecipeDto.toRecipeUi(
         generatedId: String,
         selectedInventoryIds: Set<String>
@@ -58,6 +63,7 @@ internal object RecipeUiMapper {
         )
     }
 
+    // Estimates a simple preparation time based on instruction count.
     private fun estimatePrepMinutes(steps: List<String>): Int {
         return when {
             steps.size <= 2 -> 10
@@ -67,6 +73,7 @@ internal object RecipeUiMapper {
         }
     }
 
+    // Builds a short pantry match summary for the recipe card.
     private fun buildPantryMatchText(availableCount: Int, missingCount: Int): String {
         return when {
             availableCount > 0 && missingCount == 0 -> "Uses all ingredients from inventory"
@@ -75,6 +82,7 @@ internal object RecipeUiMapper {
         }
     }
 
+    // Builds a small status tag for the recipe card.
     private fun buildTag(availableCount: Int, missingCount: Int): String {
         return when {
             availableCount > 0 && missingCount == 0 -> "Ready to cook"

@@ -6,12 +6,19 @@ import my.edu.utar.freshtrackai.ai.model.ReceiptParseResult
 import my.edu.utar.freshtrackai.ui.dashboard.InventoryCategory
 import my.edu.utar.freshtrackai.ui.dashboard.ReviewItemUi
 
+/**
+ * Converts receipt parsing results into review screen items.
+ * This keeps receipt DTO models separate from UI models.
+ */
+
 internal object ReceiptReviewMapper {
 
+    // Maps parsed receipt items into UI models for review.
     fun map(result: ReceiptParseResult): List<ReviewItemUi> {
         return result.items.map { it.toReviewItem() }
     }
 
+    // Converts a single parsed receipt item into a review item.
     private fun ReceiptItemDto.toReviewItem(): ReviewItemUi {
         val resolvedCategory = mapCategory(category)
         val resolvedDays = expiry?.estimatedShelfLifeDays ?: estimateExpiryDays(resolvedCategory)
@@ -29,6 +36,7 @@ internal object ReceiptReviewMapper {
         )
     }
 
+    // Builds a readable quantity label from parsed receipt data.
     private fun buildQuantityLabel(raw: String?, value: Double?, unit: String?): String {
         val parsedRaw = raw?.trim().orEmpty()
         val parsedUnit = unit?.trim().orEmpty()
@@ -44,6 +52,7 @@ internal object ReceiptReviewMapper {
         }
     }
 
+    // Converts receipt category text into the app's inventory category.
     private fun mapCategory(raw: String?): InventoryCategory {
         return when (raw?.trim()?.lowercase()) {
             "dairy" -> InventoryCategory.Dairy
@@ -64,6 +73,7 @@ internal object ReceiptReviewMapper {
         }
     }
 
+    // Provides a fallback expiry estimate when OCR does not return one.
     private fun estimateExpiryDays(category: InventoryCategory): Int {
         return when (category) {
             InventoryCategory.Dairy -> 5

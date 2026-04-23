@@ -5,8 +5,14 @@ import my.edu.utar.freshtrackai.ai.model.FoodDetectionResult
 import my.edu.utar.freshtrackai.ui.dashboard.InventoryCategory
 import my.edu.utar.freshtrackai.ui.dashboard.ReviewItemUi
 
+/**
+ * Converts food detection results into review screen items.
+ * This keeps AI response models separate from UI models.
+ */
+
 internal object FoodReviewMapper {
 
+    // Maps detected food items into UI models for review.
     fun map(result: FoodDetectionResult): List<ReviewItemUi> {
         return result.items.map { item ->
             val category = mapCategory(item.category)
@@ -30,6 +36,7 @@ internal object FoodReviewMapper {
         }
     }
 
+    // Builds a readable quantity label from AI output.
     private fun resolveQuantityLabel(raw: String?, value: Double?, unit: String?): String {
         val parsedRaw = raw?.trim().orEmpty()
         val parsedUnit = unit?.trim().orEmpty()
@@ -45,6 +52,7 @@ internal object FoodReviewMapper {
         }
     }
 
+    // Converts AI category text into the app's inventory category.
     private fun mapCategory(raw: String?): InventoryCategory {
         return when (raw?.trim()?.lowercase()) {
             "dairy" -> InventoryCategory.Dairy
@@ -65,6 +73,7 @@ internal object FoodReviewMapper {
         }
     }
 
+    // Provides a fallback expiry estimate when AI does not return one.
     private fun estimateExpiryDays(category: InventoryCategory): Int {
         return when (category) {
             InventoryCategory.Dairy -> 5
