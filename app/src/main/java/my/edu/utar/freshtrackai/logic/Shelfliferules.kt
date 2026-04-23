@@ -62,7 +62,6 @@ object ShelfLifeRules {
         "yogurt" to FoodCategory.DAIRY,
         "butter" to FoodCategory.DAIRY,
         "cream" to FoodCategory.DAIRY,
-        "tofu" to FoodCategory.DAIRY,
 
         // Eggs
         "egg" to FoodCategory.EGGS,

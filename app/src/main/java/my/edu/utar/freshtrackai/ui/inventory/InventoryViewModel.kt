@@ -82,10 +82,12 @@ class InventoryViewModel(
     private fun calculateExpiryStatus(expiryDate: Long): String {
         val currentTime = System.currentTimeMillis()
         val threeDaysInMillis = 3L * 24 * 60 * 60 * 1000
-        
+        val sevenDaysInMillis = 7L * 24 * 60 * 60 * 1000
+
         return when {
             expiryDate <= currentTime -> "EXPIRED"
             expiryDate - currentTime <= threeDaysInMillis -> "EXPIRING_SOON"
+            expiryDate - currentTime <= sevenDaysInMillis -> "WATCH"
             else -> "FRESH"
         }
     }

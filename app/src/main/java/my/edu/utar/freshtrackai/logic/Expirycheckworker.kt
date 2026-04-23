@@ -2,6 +2,7 @@ package my.edu.utar.freshtrackai.logic
 
 import android.content.Context
 import androidx.work.*
+import kotlin.math.ceil
 import androidx.work.ListenableWorker.Result
 import kotlinx.coroutines.flow.firstOrNull
 import my.edu.utar.freshtrackai.data.local.AppDatabase
@@ -39,8 +40,9 @@ class ExpiryCheckWorker(
 
             for (item in items) {
                 // item.expiryDate is stored as epoch millis (Long) in InventoryItem entity
-                val daysRemaining = ((item.expiryDate - currentTime) /
-                        (1000L * 60 * 60 * 24)).toInt()
+                val daysRemaining = ceil(
+                    (item.expiryDate - currentTime).toDouble() / (1000.0 * 60 * 60 * 24)
+                ).toInt()
 
                 when (ExpiryCalculator.getExpiryStatus(daysRemaining)) {
                     ExpiryStatus.CRITICAL -> criticalItems.add(item.name)

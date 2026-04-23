@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import java.util.UUID
 import my.edu.utar.freshtrackai.logic.ExpiryCalculator
 import my.edu.utar.freshtrackai.logic.ShelfLifeRules
+import kotlin.math.ceil
 
 internal fun InventoryItem.toExpiringOrNull(): ExpiringItem? {
     val badge = urgencyForDays(expiresInDays) ?: return null
@@ -21,7 +22,7 @@ internal fun urgencyForDays(days: Int): ExpiryBadge? {
     val status = ExpiryCalculator.getExpiryStatus(days)
 
     return when (status) {
-        ExpiryCalculator.ExpiryStatus.EXPIRED -> ExpiryBadge.Critical
+        ExpiryCalculator.ExpiryStatus.EXPIRED -> ExpiryBadge.Warning   // distinct badge for expired
         ExpiryCalculator.ExpiryStatus.CRITICAL -> ExpiryBadge.Critical
         ExpiryCalculator.ExpiryStatus.WATCH -> ExpiryBadge.Watch
         else -> null
@@ -149,7 +150,7 @@ internal fun ReviewItemUi.toInventoryItem(): my.edu.utar.freshtrackai.data.local
 internal fun my.edu.utar.freshtrackai.data.local.entity.InventoryItem.toUiModel(): InventoryItem {
     val currentMillis = System.currentTimeMillis()
     val diff = this.expiryDate - currentMillis
-    val days = (diff / (1000 * 60 * 60 * 24)).toInt()
+    val days = ceil(diff.toDouble() / (1000.0 * 60 * 60 * 24)).toInt()
     
     val addedDiff = currentMillis - this.purchaseDate
     val addedDays = (addedDiff / (1000 * 60 * 60 * 24)).toInt().coerceAtLeast(0)
