@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import my.edu.utar.freshtrackai.data.local.entity.InventoryItem
+import my.edu.utar.freshtrackai.data.local.entity.ShoppingItemEntity
 import my.edu.utar.freshtrackai.data.repository.InventoryRepository
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
@@ -24,6 +25,9 @@ class InventoryViewModel(
 
     // Retrieving expiring-soon items explicitly for dashboard alerts
     val expiringItems: StateFlow<List<InventoryItem>> = repository.getItemsByExpiryStatus("EXPIRING_SOON")
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val shoppingItems: StateFlow<List<ShoppingItemEntity>> = repository.allShoppingItems
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Add missing item logic
@@ -101,12 +105,27 @@ class InventoryViewModel(
         }
     }
 
+    fun addShoppingItem(name: String, sourceRecipeId: String? = null, sourceRecipeName: String? = null) {
+        viewModelScope.launch {
+            repository.insertShoppingItem(ShoppingItemEntity(name = name, sourceRecipeId = sourceRecipeId, sourceRecipeName = sourceRecipeName))
+        }
+    }
+    
+    fun toggleShoppingItem(item: ShoppingItemEntity, checked: Boolean) {
+        viewModelScope.launch { repository.updateShoppingItem(item.copy(checked = checked)) }
+    }
+
+    fun clearPurchasedShoppingItems() {
+        viewModelScope.launch { repository.clearPurchasedShoppingItems() }
+    }
+
     class Factory(private val context: Context) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
             if (modelClass.isAssignableFrom(InventoryViewModel::class.java)) {
+                val db = AppDatabase.getDatabase(context)
                 @Suppress("UNCHECKED_CAST")
                 return InventoryViewModel(
-                    InventoryRepository(AppDatabase.getDatabase(context).inventoryDao())
+                    InventoryRepository(db.inventoryDao(), db.shoppingDao())
                 ) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")

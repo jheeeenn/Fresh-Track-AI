@@ -5,12 +5,15 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import my.edu.utar.freshtrackai.data.local.dao.InventoryDao
+import my.edu.utar.freshtrackai.data.local.dao.ShoppingDao
 import my.edu.utar.freshtrackai.data.local.entity.InventoryItem
+import my.edu.utar.freshtrackai.data.local.entity.ShoppingItemEntity
 
-@Database(entities = [InventoryItem::class], version = 1, exportSchema = false)
+@Database(entities = [InventoryItem::class, ShoppingItemEntity::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun inventoryDao(): InventoryDao
+    abstract fun shoppingDao(): ShoppingDao
 
     companion object {
         @Volatile

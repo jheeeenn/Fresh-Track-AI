@@ -153,7 +153,10 @@ internal fun my.edu.utar.freshtrackai.data.local.entity.InventoryItem.toUiModel(
     
     val addedDiff = currentMillis - this.purchaseDate
     val addedDays = (addedDiff / (1000 * 60 * 60 * 24)).toInt().coerceAtLeast(0)
-    
+
+    val sdf = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
+    val formattedDate = sdf.format(java.util.Date(this.expiryDate))
+
     val cat = InventoryCategory.values().firstOrNull { it.name.equals(this.category, ignoreCase = true) } ?: InventoryCategory.Other
     
     return InventoryItem(
@@ -163,7 +166,9 @@ internal fun my.edu.utar.freshtrackai.data.local.entity.InventoryItem.toUiModel(
         quantityLabel = if (this.quantity % 1.0 == 0.0) "${this.quantity.toInt()} ${this.unit}" else "${this.quantity} ${this.unit}",
         addedDaysAgo = addedDays,
         expiresInDays = days,
-        thumbnailRef = this.name.lowercase().replace(" ", "_")
+        thumbnailRef = this.name.lowercase().replace(" ", "_"),
+        nutritionNotes = this.notes,
+        formattedExpiryDate = formattedDate
     )
 }
 
@@ -268,7 +273,8 @@ internal suspend fun draftToInventoryItem(draft: AddItemFormDraft): my.edu.utar.
         category = finalCategory.name,
         quantity = qtyData.first,
         unit = qtyData.second,
-        expiryDate = expiryMillis
+        expiryDate = expiryMillis,
+        notes = draft.nutritionNotes
     )
 }
 

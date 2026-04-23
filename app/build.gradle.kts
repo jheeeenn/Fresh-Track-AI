@@ -28,7 +28,12 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val geminiApiKey = localProperties.getProperty("GEMINI_API_KEY", "")
+        val apiKey = localProperties.getProperty("API_KEY", "")
+
         buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
+        buildConfigField("String", "API_KEY", "\"$apiKey\"")
     }
 
     buildTypes {
@@ -49,6 +54,10 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+
+        testOptions {
+            unitTests.isReturnDefaultValues = true
+        }
     }
 }
 

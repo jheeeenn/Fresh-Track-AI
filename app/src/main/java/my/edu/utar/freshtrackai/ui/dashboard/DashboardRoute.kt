@@ -62,7 +62,21 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
     val reviewItems = remember { mutableStateListOf<ReviewItemUi>().apply { addAll(seedReviewItems()) } }
     val recipesAll = remember { seedRecipes() }
     val recipeRecommendations = remember { mutableStateListOf<RecipeUi>() }
-    val shoppingListItems = remember { mutableStateListOf<ShoppingListItemUi>().apply { addAll(seedShoppingListItems()) } }
+    
+    val dbShoppingItems by inventoryVm.shoppingItems.collectAsState()
+    val shoppingListItems = remember(dbShoppingItems) {
+        mutableStateListOf<ShoppingListItemUi>().apply {
+            addAll(dbShoppingItems.map { entity ->
+                ShoppingListItemUi(
+                    id = entity.itemId.toString(),
+                    name = entity.name,
+                    sourceRecipeId = entity.sourceRecipeId,
+                    sourceRecipeName = entity.sourceRecipeName,
+                    checked = entity.checked
+                )
+            })
+        }
+    }
     var expiringSearch by rememberSaveable { mutableStateOf("") }
     var expiringFilter by rememberSaveable { mutableStateOf<InventoryCategory?>(null) }
     var editingReviewItemId by remember { mutableStateOf<String?>(null) }
@@ -156,7 +170,8 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                         name = item.name,
                         quantity = item.quantityLabel,
                         category = item.category,
-                        expiryDate = "${item.expiresInDays}d"
+                        expiryDate = item.formattedExpiryDate,
+                        nutritionNotes = item.nutritionNotes
                     )
                     screen = WiseScreen.AddMissingItem
                 },
@@ -367,24 +382,16 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
             WiseScreen.ShoppingList -> ShoppingListScreen(
                 items = shoppingListItems,
                 onItemCheckedChange = { itemId, checked ->
-                    val idx = shoppingListItems.indexOfFirst { it.id == itemId }
-                    if (idx >= 0) {
-                        shoppingListItems[idx] = shoppingListItems[idx].copy(checked = checked)
-                    }
+                    val dbItem = dbShoppingItems.firstOrNull { it.itemId.toString() == itemId }
+                    if (dbItem != null) inventoryVm.toggleShoppingItem(dbItem, checked)
                 },
                 onAddGeneralItem = { itemName ->
-                    shoppingListItems.add(
-                        ShoppingListItemUi(
-                            id = "shop-${UUID.randomUUID().toString().take(8)}",
-                            name = itemName
-                        )
-                    )
+                    inventoryVm.addShoppingItem(name = itemName)
                     toastMessage = "Added to shopping list."
                 },
                 onClearPurchased = {
-                    val before = shoppingListItems.size
-                    shoppingListItems.removeAll { it.checked }
-                    val removed = before - shoppingListItems.size
+                    val removed = dbShoppingItems.count { it.checked }
+                    inventoryVm.clearPurchasedShoppingItems()
                     toastMessage = if (removed > 0) {
                         "Cleared $removed purchased item(s)."
                     } else {
@@ -407,10 +414,15 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                 RecipeDetailsScreen(
                     recipe = recipe,
                     onAddMissingToShoppingList = { current ->
-                        val added = addMissingItemsToShoppingList(
-                            shoppingListItems = shoppingListItems,
-                            recipe = current
-                        )
+                        var added = 0
+                        current.ingredientsMissing.forEach { ingredient ->
+                            inventoryVm.addShoppingItem(
+                                name = ingredient.name,
+                                sourceRecipeId = current.id,
+                                sourceRecipeName = current.title
+                            )
+                            added++
+                        }
                         toastMessage = if (added > 0) {
                             "$added missing item(s) added to shopping list."
                         } else {

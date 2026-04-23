@@ -84,18 +84,6 @@ internal fun MainDashboardScreen(
                 contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 110.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-
-                item {
-                    Button(
-                        onClick = { my.edu.utar.freshtrackai.logic.ExpiryCheckWorker.runNow(context) },
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = RoseRed, contentColor = White),
-                        shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Text("TEST PUSH NOTIFICATIONS", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
-                    }
-                }
-
                 item {
                     Text("KITCHEN OVERVIEW", color = Slate600, fontSize = 10.sp, letterSpacing = 1.sp)
                     Text(
