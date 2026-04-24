@@ -4,19 +4,21 @@ import android.util.Log // <--- Added Logging so you can see the AI working
 import com.google.ai.client.generativeai.GenerativeModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import my.edu.utar.freshtrackai.BuildConfig
-import my.edu.utar.freshtrackai.ai.resolveGeminiApiKey
+import my.edu.utar.freshtrackai.ai.AppContextProvider
+import my.edu.utar.freshtrackai.ai.loadConfiguredGeminiApiKey
 
 object AiCategorizer {
 
-    internal fun resolveApiKey(primaryKey: String, fallbackKey: String): String {
-        return resolveGeminiApiKey(primaryKey, fallbackKey)
+    internal fun resolveApiKey(savedKey: String): String {
+        return savedKey.trim()
     }
 
-    private val apiKey = resolveApiKey(BuildConfig.GEMINI_API_KEY, BuildConfig.API_KEY)
+    private fun currentApiKey(): String {
+        return resolveApiKey(loadConfiguredGeminiApiKey(AppContextProvider.get()))
+    }
 
-    private val generativeModel by lazy {
-        GenerativeModel(
+    private fun generativeModel(apiKey: String): GenerativeModel {
+        return GenerativeModel(
             modelName = "gemini-2.5-flash",
             apiKey = apiKey
         )
@@ -27,6 +29,10 @@ object AiCategorizer {
     // ─────────────────────────────────────────────────────────────
     suspend fun getEstimatedDays(itemName: String, categoryName: String): Int = withContext(Dispatchers.IO) {
         try {
+            val apiKey = currentApiKey()
+            if (apiKey.isBlank()) {
+                return@withContext -1
+            }
             val prompt = """
                 You are a food expiry estimation AI. 
                 Estimate the average shelf life in days for an unopened package of "$itemName", which the user has classified under the "$categoryName" category.
@@ -36,7 +42,7 @@ object AiCategorizer {
 
             Log.d("FreshTrack_AI", "🧠 Sending to Gemini: Estimating days for $itemName ($categoryName)...")
 
-            val response = generativeModel.generateContent(prompt)
+            val response = generativeModel(apiKey).generateContent(prompt)
 
             // Log what the AI actually said before we clean it up!
             Log.d("FreshTrack_AI", "🤖 Gemini Answered: ${response.text}")
@@ -64,6 +70,10 @@ object AiCategorizer {
     // ─────────────────────────────────────────────────────────────
     suspend fun categorize(itemName: String): ShelfLifeRules.FoodCategory = withContext(Dispatchers.IO) {
         try {
+            val apiKey = currentApiKey()
+            if (apiKey.isBlank()) {
+                return@withContext ShelfLifeRules.FoodCategory.OTHER
+            }
             val prompt = """
                 You are an inventory categorization AI. 
                 Look at the following food item: "$itemName".
@@ -74,7 +84,7 @@ object AiCategorizer {
 
             Log.d("FreshTrack_AI", "🧠 Sending to Gemini: Guessing category for $itemName...")
 
-            val response = generativeModel.generateContent(prompt)
+            val response = generativeModel(apiKey).generateContent(prompt)
 
             var aiAnswer = response.text?.uppercase() ?: "OTHER"
             Log.d("FreshTrack_AI", "🤖 Gemini Answered Category: $aiAnswer")

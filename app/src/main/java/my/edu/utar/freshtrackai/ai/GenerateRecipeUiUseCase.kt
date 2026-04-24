@@ -11,7 +11,7 @@ import my.edu.utar.freshtrackai.ui.dashboard.RecipeUi
  */
 
 internal class GenerateRecipeUiUseCase(
-    private val extractor: CloudFoodExtractor = AiProvider.cloudFoodExtractor
+    private val extractorProvider: () -> CloudFoodExtractor = { AiProvider.cloudFoodExtractor() }
 ) {
 
     // Generates recipe UI models from the current inventory.
@@ -19,6 +19,7 @@ internal class GenerateRecipeUiUseCase(
         inventory: List<InventoryItem>,
         onStatus: ((String) -> Unit)? = null
     ): List<RecipeUi> {
+        val extractor = extractorProvider()
         val mappedInput = InventoryRecipeInputMapper.map(inventory)
         val summary = InventorySummaryBuilder.fromNames(mappedInput.allItemNames)
         val prompt = PromptFactory.recipePrompt(inventorySummary = summary)

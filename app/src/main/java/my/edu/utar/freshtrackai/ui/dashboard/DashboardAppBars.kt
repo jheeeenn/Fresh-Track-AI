@@ -37,6 +37,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,15 +51,46 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import my.edu.utar.freshtrackai.R
+import my.edu.utar.freshtrackai.ai.GeminiApiKeyValidationResult
 import my.edu.utar.freshtrackai.ai.GemmaModelStatus
 import my.edu.utar.freshtrackai.ai.GemmaModelStore
+import my.edu.utar.freshtrackai.ai.validateGeminiApiKey
 import my.edu.utar.freshtrackai.logic.NotificationHelper
+
+internal enum class ApiKeyStatusTone {
+    Neutral,
+    Success,
+    Error
+}
+
+internal data class ApiKeyStatusUi(
+    val message: String,
+    val tone: ApiKeyStatusTone
+)
+
+internal fun apiKeyStatusForValidationResult(
+    result: GeminiApiKeyValidationResult
+): ApiKeyStatusUi {
+    return when (result) {
+        GeminiApiKeyValidationResult.NotSet ->
+            ApiKeyStatusUi("No API key entered.", ApiKeyStatusTone.Neutral)
+        GeminiApiKeyValidationResult.Valid ->
+            ApiKeyStatusUi("API key is valid.", ApiKeyStatusTone.Success)
+        GeminiApiKeyValidationResult.InvalidKey ->
+            ApiKeyStatusUi("API key is invalid.", ApiKeyStatusTone.Error)
+        GeminiApiKeyValidationResult.QuotaExhausted ->
+            ApiKeyStatusUi("API key works, but quota/credits are exhausted.", ApiKeyStatusTone.Error)
+        GeminiApiKeyValidationResult.RequestFailed ->
+            ApiKeyStatusUi("Request failed. Check connection or try again.", ApiKeyStatusTone.Error)
+    }
+}
 
 @Composable
 internal fun DashboardTopBar(
@@ -70,6 +102,9 @@ internal fun DashboardTopBar(
     val coroutineScope = rememberCoroutineScope()
     var showSettingsSheet by rememberSaveable { mutableStateOf(false) }
     var gemmaStatus by rememberSaveable { mutableStateOf(GemmaModelStore.getModelStatus(context).name) }
+    var apiKeyDraft by rememberSaveable { mutableStateOf("") }
+    var apiKeyStatusMessage by rememberSaveable { mutableStateOf("No API key saved.") }
+    var apiKeyStatusTone by rememberSaveable { mutableStateOf(ApiKeyStatusTone.Neutral.name) }
 
     val gemmaModelLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -106,6 +141,15 @@ internal fun DashboardTopBar(
     LaunchedEffect(showSettingsSheet) {
         if (showSettingsSheet) {
             gemmaStatus = GemmaModelStore.getModelStatus(context).name
+            val savedKey = DashboardPreferencesStore.loadGeminiApiKey(context)
+            apiKeyDraft = savedKey
+            if (savedKey.isBlank()) {
+                apiKeyStatusMessage = "No API key saved."
+                apiKeyStatusTone = ApiKeyStatusTone.Neutral.name
+            } else {
+                apiKeyStatusMessage = "API key saved."
+                apiKeyStatusTone = ApiKeyStatusTone.Success.name
+            }
         }
     }
 
@@ -149,10 +193,48 @@ internal fun DashboardTopBar(
         ProfileQuickSettingsSheet(
             gemmaStatus = GemmaModelStatus.valueOf(gemmaStatus),
             notificationsGranted = NotificationHelper.hasNotificationPermission(context),
+            apiKeyValue = apiKeyDraft,
+            apiKeyStatusMessage = apiKeyStatusMessage,
+            apiKeyStatusTone = ApiKeyStatusTone.valueOf(apiKeyStatusTone),
             onDismiss = { showSettingsSheet = false },
             onChooseGemmaModel = { gemmaModelLauncher.launch(arrayOf("*/*")) },
             onOpenNotificationSettings = { NotificationHelper.openNotificationSettings(context) },
-            onSendTestNotification = { NotificationHelper.sendTestNotification(context) }
+            onApiKeyChange = { apiKeyDraft = it },
+            onSaveApiKey = {
+                val normalized = apiKeyDraft.trim()
+                if (normalized.isBlank()) {
+                    apiKeyStatusMessage = "Enter an API key first."
+                    apiKeyStatusTone = ApiKeyStatusTone.Error.name
+                } else {
+                    DashboardPreferencesStore.saveGeminiApiKey(context, normalized)
+                    apiKeyDraft = normalized
+                    apiKeyStatusMessage = "API key saved."
+                    apiKeyStatusTone = ApiKeyStatusTone.Success.name
+                }
+            },
+            onClearApiKey = {
+                DashboardPreferencesStore.clearGeminiApiKey(context)
+                apiKeyDraft = ""
+                apiKeyStatusMessage = "API key cleared."
+                apiKeyStatusTone = ApiKeyStatusTone.Neutral.name
+            },
+            onTestApiKey = {
+                coroutineScope.launch {
+                    controller?.setAiTask(
+                        DashboardAiTaskState(
+                            title = "Testing API key…",
+                            detail = "Checking the external Gemini service."
+                        )
+                    )
+                    val result = withContext(Dispatchers.IO) {
+                        validateGeminiApiKey(apiKeyDraft)
+                    }
+                    controller?.setAiTask(null)
+                    val status = apiKeyStatusForValidationResult(result)
+                    apiKeyStatusMessage = status.message
+                    apiKeyStatusTone = status.tone.name
+                }
+            }
         )
     }
 }
@@ -180,10 +262,16 @@ internal fun BottomNav(active: RootTab, onTabSelected: (RootTab) -> Unit) {
 private fun ProfileQuickSettingsSheet(
     gemmaStatus: GemmaModelStatus,
     notificationsGranted: Boolean,
+    apiKeyValue: String,
+    apiKeyStatusMessage: String,
+    apiKeyStatusTone: ApiKeyStatusTone,
     onDismiss: () -> Unit,
     onChooseGemmaModel: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
-    onSendTestNotification: () -> Unit
+    onApiKeyChange: (String) -> Unit,
+    onSaveApiKey: () -> Unit,
+    onClearApiKey: () -> Unit,
+    onTestApiKey: () -> Unit
 ) {
     val gemmaStatusLabel = when (gemmaStatus) {
         GemmaModelStatus.Configured -> "Configured"
@@ -194,6 +282,11 @@ private fun ProfileQuickSettingsSheet(
         GemmaModelStatus.Configured -> Emerald
         GemmaModelStatus.MissingFile -> RoseRed
         GemmaModelStatus.NotSet -> Slate600
+    }
+    val apiKeyStatusColor = when (apiKeyStatusTone) {
+        ApiKeyStatusTone.Neutral -> Slate600
+        ApiKeyStatusTone.Success -> Emerald
+        ApiKeyStatusTone.Error -> RoseRed
     }
 
     ModalBottomSheet(
@@ -270,6 +363,65 @@ private fun ProfileQuickSettingsSheet(
                         .padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    Text("External API Key", color = Slate900, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Enter your Gemini API key for external AI features.",
+                        color = Slate600
+                    )
+                    OutlinedTextField(
+                        value = apiKeyValue,
+                        onValueChange = onApiKeyChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("Gemini API Key") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        placeholder = { Text("Paste your API key") },
+                        colors = freshOutlinedTextFieldColors()
+                    )
+                    Text(
+                        apiKeyStatusMessage,
+                        color = apiKeyStatusColor,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = onSaveApiKey,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Emerald, contentColor = White),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Save")
+                        }
+                        OutlinedButton(
+                            onClick = onClearApiKey,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Clear", color = Slate900)
+                        }
+                    }
+                    Button(
+                        onClick = onTestApiKey,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Slate900, contentColor = White),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Test API Key")
+                    }
+                }
+            }
+
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = Gray100)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     Text("Notifications", color = Slate900, fontWeight = FontWeight.SemiBold)
                     Text(
                         if (notificationsGranted) "Permission granted" else "Permission required",
@@ -279,18 +431,9 @@ private fun ProfileQuickSettingsSheet(
                         OutlinedButton(
                             onClick = onOpenNotificationSettings,
                             shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Text("Open Settings", color = Slate900)
-                        }
-                        Button(
-                            onClick = onSendTestNotification,
-                            enabled = notificationsGranted,
-                            colors = ButtonDefaults.buttonColors(containerColor = Emerald, contentColor = White),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Send Test")
                         }
                     }
                 }

@@ -1,5 +1,9 @@
 package my.edu.utar.freshtrackai.ai
 
+import android.content.Context
+import com.google.ai.client.generativeai.GenerativeModel
+import my.edu.utar.freshtrackai.ui.dashboard.DashboardPreferencesStore
+
 internal enum class GeminiFailureKind {
     MissingKey,
     InvalidKey,
@@ -8,8 +12,60 @@ internal enum class GeminiFailureKind {
     Unknown
 }
 
-internal fun resolveGeminiApiKey(primaryKey: String, fallbackKey: String): String {
-    return primaryKey.ifBlank { fallbackKey }
+internal enum class GeminiApiKeyValidationResult {
+    NotSet,
+    Valid,
+    InvalidKey,
+    QuotaExhausted,
+    RequestFailed
+}
+
+internal fun resolveConfiguredGeminiApiKey(savedKey: String): String {
+    return savedKey.trim()
+}
+
+internal fun loadConfiguredGeminiApiKey(context: Context?): String {
+    val savedKey = context?.let(DashboardPreferencesStore::loadGeminiApiKey).orEmpty()
+    return resolveConfiguredGeminiApiKey(savedKey)
+}
+
+internal suspend fun validateGeminiApiKey(
+    apiKey: String,
+    validationCall: suspend (String, String) -> String = { key, prompt ->
+        GenerativeModel(
+            modelName = "gemini-2.5-flash",
+            apiKey = key
+        ).generateContent(prompt).text.orEmpty().trim()
+    }
+): GeminiApiKeyValidationResult {
+    val normalizedKey = resolveConfiguredGeminiApiKey(apiKey)
+    if (normalizedKey.isBlank()) {
+        return GeminiApiKeyValidationResult.NotSet
+    }
+
+    return runCatching {
+        validationCall(
+            normalizedKey,
+            "Reply with OK only."
+        )
+    }.fold(
+        onSuccess = { response ->
+            if (response.isNotBlank()) {
+                GeminiApiKeyValidationResult.Valid
+            } else {
+                GeminiApiKeyValidationResult.RequestFailed
+            }
+        },
+        onFailure = { throwable ->
+            when (classifyGeminiFailure(throwable)) {
+                GeminiFailureKind.InvalidKey -> GeminiApiKeyValidationResult.InvalidKey
+                GeminiFailureKind.QuotaExhausted -> GeminiApiKeyValidationResult.QuotaExhausted
+                GeminiFailureKind.MissingKey,
+                GeminiFailureKind.Busy,
+                GeminiFailureKind.Unknown -> GeminiApiKeyValidationResult.RequestFailed
+            }
+        }
+    )
 }
 
 internal fun classifyGeminiFailure(throwable: Throwable): GeminiFailureKind {
