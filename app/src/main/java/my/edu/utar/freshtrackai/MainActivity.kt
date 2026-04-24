@@ -1,12 +1,12 @@
 package my.edu.utar.freshtrackai
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -24,6 +24,7 @@ import my.edu.utar.freshtrackai.ui.dashboard.FreshTrackDashboardScreen
 import my.edu.utar.freshtrackai.ui.theme.FreshTrackAITheme
 
 class MainActivity : ComponentActivity() {
+
     private val prefs by lazy {
         getSharedPreferences("freshtrack_prefs", MODE_PRIVATE)
     }
@@ -46,6 +47,7 @@ class MainActivity : ComponentActivity() {
             prefs.edit()
                 .putBoolean(KEY_NOTIFICATION_PERMISSION_REQUESTED, true)
                 .apply()
+
             Log.d("NOTIF_PERMISSION", "Notification permission granted = $granted")
         }
 
@@ -54,6 +56,7 @@ class MainActivity : ComponentActivity() {
         ) { uri: Uri? ->
             if (uri == null) {
                 Log.d("GEMMA_PICKER", "No model selected")
+                maybeRequestNotificationPermission()
                 return@registerForActivityResult
             }
 
@@ -74,17 +77,25 @@ class MainActivity : ComponentActivity() {
         }
 
         val gemmaStatus = GemmaModelStore.getModelStatus(this)
-        if (shouldRequestGemmaModel(gemmaStatus)) {
-            if (gemmaStatus == GemmaModelStatus.MissingFile) {
-                Toast.makeText(
-                    this,
-                    "Selected Gemma model file is missing. Please choose it again.",
-                    Toast.LENGTH_LONG
-                ).show()
+
+        when (gemmaStatus) {
+            GemmaModelStatus.Configured -> {
+                maybeRequestNotificationPermission()
             }
-            pickGemmaModelLauncher.launch(arrayOf("*/*"))
-        } else {
-            maybeRequestNotificationPermission()
+
+            GemmaModelStatus.MissingFile -> {
+                showGemmaModelSetupDialog(
+                    pickerLauncher = pickGemmaModelLauncher,
+                    message = "The previously selected Gemma model file is missing. Please choose the model file again, or set it up later from Profile Settings."
+                )
+            }
+
+            GemmaModelStatus.NotSet -> {
+                showGemmaModelSetupDialog(
+                    pickerLauncher = pickGemmaModelLauncher,
+                    message = "Local Gemma model is not configured yet. The model is required for local food scan and receipt OCR. You can choose the model file now, or set it up later from Profile Settings."
+                )
+            }
         }
 
         setContent {
@@ -108,7 +119,8 @@ class MainActivity : ComponentActivity() {
         }
 
         val wasRequested = prefs.getBoolean(KEY_NOTIFICATION_PERMISSION_REQUESTED, false)
-        val canReRequest = shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)
+        val canReRequest =
+            shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)
 
         if (wasRequested && !canReRequest) {
             Log.d("NOTIF_PERMISSION", "Notification permission denied permanently or already handled.")
@@ -118,11 +130,27 @@ class MainActivity : ComponentActivity() {
         notificationPermissionLauncher?.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 
-    companion object {
-        private const val KEY_NOTIFICATION_PERMISSION_REQUESTED = "notification_permission_requested"
+    private fun showGemmaModelSetupDialog(
+        pickerLauncher: ActivityResultLauncher<Array<String>>,
+        message: String
+    ) {
+        AlertDialog.Builder(this)
+            .setTitle("Set up Local Gemma Model")
+            .setMessage(message)
+            .setPositiveButton("Choose Model File") { _, _ ->
+                pickerLauncher.launch(arrayOf("*/*"))
+            }
+            .setNegativeButton("Later") { _, _ ->
+                maybeRequestNotificationPermission()
+            }
+            .setOnCancelListener {
+                maybeRequestNotificationPermission()
+            }
+            .show()
     }
-}
 
-internal fun shouldRequestGemmaModel(status: GemmaModelStatus): Boolean {
-    return status != GemmaModelStatus.Configured
+    companion object {
+        private const val KEY_NOTIFICATION_PERMISSION_REQUESTED =
+            "notification_permission_requested"
+    }
 }
