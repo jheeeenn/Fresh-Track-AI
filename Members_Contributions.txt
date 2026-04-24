@@ -1,6 +1,6 @@
 Work Contribution by Member
 
-Khoo Ian Hong – UI Package
+Koo Ian Hong – UI Package
 Built and organized user interface components in the UI package.
 Implemented page-level interaction, user input handling, and display behavior.
 Connected UI elements with logic and AI package results for end-to-end functionality.
