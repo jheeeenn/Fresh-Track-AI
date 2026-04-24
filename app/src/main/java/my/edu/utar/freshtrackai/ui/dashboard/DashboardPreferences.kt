@@ -41,6 +41,7 @@ internal object DashboardPreferencesStore {
     private const val PREFS_NAME = "dashboard_prefs"
     private const val KEY_INVENTORY_SORT_MODE = "inventory_sort_mode"
     private const val KEY_GEMINI_API_KEY = "gemini_api_key"
+    private const val KEY_GEMMA_DOWNLOAD_ID = "gemma_download_id"
 
     private fun store(context: Context): DashboardPreferenceStore {
         return SharedPreferencesDashboardPreferenceStore(
@@ -88,5 +89,29 @@ internal object DashboardPreferencesStore {
 
     internal fun clearGeminiApiKey(store: DashboardPreferenceStore) {
         store.remove(KEY_GEMINI_API_KEY)
+    }
+
+    fun loadGemmaDownloadId(context: Context): Long? {
+        return loadGemmaDownloadId(store(context))
+    }
+
+    internal fun loadGemmaDownloadId(store: DashboardPreferenceStore): Long? {
+        return store.getString(KEY_GEMMA_DOWNLOAD_ID)?.toLongOrNull()
+    }
+
+    fun saveGemmaDownloadId(context: Context, downloadId: Long) {
+        saveGemmaDownloadId(store(context), downloadId)
+    }
+
+    internal fun saveGemmaDownloadId(store: DashboardPreferenceStore, downloadId: Long) {
+        store.putString(KEY_GEMMA_DOWNLOAD_ID, downloadId.toString())
+    }
+
+    fun clearGemmaDownloadId(context: Context) {
+        clearGemmaDownloadId(store(context))
+    }
+
+    internal fun clearGemmaDownloadId(store: DashboardPreferenceStore) {
+        store.remove(KEY_GEMMA_DOWNLOAD_ID)
     }
 }

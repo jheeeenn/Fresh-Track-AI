@@ -55,12 +55,16 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import my.edu.utar.freshtrackai.R
 import my.edu.utar.freshtrackai.ai.GeminiApiKeyValidationResult
+import my.edu.utar.freshtrackai.ai.GemmaModelDownloadManager
+import my.edu.utar.freshtrackai.ai.GemmaModelDownloadStatus
 import my.edu.utar.freshtrackai.ai.GemmaModelStatus
 import my.edu.utar.freshtrackai.ai.GemmaModelStore
+import my.edu.utar.freshtrackai.ai.gemmaDownloadStatusMessage
 import my.edu.utar.freshtrackai.ai.validateGeminiApiKey
 import my.edu.utar.freshtrackai.logic.NotificationHelper
 
@@ -102,6 +106,7 @@ internal fun DashboardTopBar(
     val coroutineScope = rememberCoroutineScope()
     var showSettingsSheet by rememberSaveable { mutableStateOf(false) }
     var gemmaStatus by rememberSaveable { mutableStateOf(GemmaModelStore.getModelStatus(context).name) }
+    var gemmaDownloadStatus by rememberSaveable { mutableStateOf("") }
     var apiKeyDraft by rememberSaveable { mutableStateOf("") }
     var apiKeyStatusMessage by rememberSaveable { mutableStateOf("No API key saved.") }
     var apiKeyStatusTone by rememberSaveable { mutableStateOf(ApiKeyStatusTone.Neutral.name) }
@@ -141,6 +146,12 @@ internal fun DashboardTopBar(
     LaunchedEffect(showSettingsSheet) {
         if (showSettingsSheet) {
             gemmaStatus = GemmaModelStore.getModelStatus(context).name
+            val savedDownloadId = DashboardPreferencesStore.loadGemmaDownloadId(context)
+            gemmaDownloadStatus = savedDownloadId?.let { downloadId ->
+                gemmaDownloadStatusMessage(
+                    GemmaModelDownloadManager.queryDownloadStatus(context, downloadId)
+                )
+            }.orEmpty()
             val savedKey = DashboardPreferencesStore.loadGeminiApiKey(context)
             apiKeyDraft = savedKey
             if (savedKey.isBlank()) {
@@ -150,6 +161,37 @@ internal fun DashboardTopBar(
                 apiKeyStatusMessage = "API key saved."
                 apiKeyStatusTone = ApiKeyStatusTone.Success.name
             }
+        }
+    }
+
+    LaunchedEffect(showSettingsSheet) {
+        if (!showSettingsSheet) return@LaunchedEffect
+
+        while (showSettingsSheet) {
+            val downloadId = DashboardPreferencesStore.loadGemmaDownloadId(context)
+            if (downloadId == null) {
+                delay(1000)
+                continue
+            }
+
+            when (val status = GemmaModelDownloadManager.queryDownloadStatus(context, downloadId)) {
+                GemmaModelDownloadStatus.Successful -> {
+                    gemmaDownloadStatus = gemmaDownloadStatusMessage(status)
+                    DashboardPreferencesStore.clearGemmaDownloadId(context)
+                    return@LaunchedEffect
+                }
+                is GemmaModelDownloadStatus.Failed,
+                GemmaModelDownloadStatus.NotFound -> {
+                    gemmaDownloadStatus = gemmaDownloadStatusMessage(status)
+                    DashboardPreferencesStore.clearGemmaDownloadId(context)
+                    return@LaunchedEffect
+                }
+                else -> {
+                    gemmaDownloadStatus = gemmaDownloadStatusMessage(status)
+                }
+            }
+
+            delay(1000)
         }
     }
 
@@ -196,7 +238,28 @@ internal fun DashboardTopBar(
             apiKeyValue = apiKeyDraft,
             apiKeyStatusMessage = apiKeyStatusMessage,
             apiKeyStatusTone = ApiKeyStatusTone.valueOf(apiKeyStatusTone),
+            gemmaDownloadStatus = gemmaDownloadStatus,
             onDismiss = { showSettingsSheet = false },
+            onDownloadGemmaModel = {
+                runCatching { GemmaModelDownloadManager.enqueueDownload(context) }
+                    .onSuccess { downloadId ->
+                        DashboardPreferencesStore.saveGemmaDownloadId(context, downloadId)
+                        gemmaDownloadStatus =
+                            gemmaDownloadStatusMessage(GemmaModelDownloadStatus.Pending)
+                        Toast.makeText(
+                            context,
+                            "Download started.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                    .onFailure {
+                        Toast.makeText(
+                            context,
+                            it.message ?: "Failed to start model download.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+            },
             onChooseGemmaModel = { gemmaModelLauncher.launch(arrayOf("*/*")) },
             onOpenNotificationSettings = { NotificationHelper.openNotificationSettings(context) },
             onApiKeyChange = { apiKeyDraft = it },
@@ -265,7 +328,9 @@ private fun ProfileQuickSettingsSheet(
     apiKeyValue: String,
     apiKeyStatusMessage: String,
     apiKeyStatusTone: ApiKeyStatusTone,
+    gemmaDownloadStatus: String,
     onDismiss: () -> Unit,
+    onDownloadGemmaModel: () -> Unit,
     onChooseGemmaModel: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
     onApiKeyChange: (String) -> Unit,
@@ -340,6 +405,26 @@ private fun ProfileQuickSettingsSheet(
                             )
                         }
                     }
+                    Text(
+                        "Download the Gemma 4 file to Downloads, then tap Choose Model to import it into the app.",
+                        color = Slate600,
+                        fontSize = 12.sp
+                    )
+                    if (gemmaDownloadStatus.isNotBlank()) {
+                        Text(
+                            gemmaDownloadStatus,
+                            color = Slate600,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = onDownloadGemmaModel,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Download Gemma 4", color = Slate900)
+                    }
                     Button(
                         onClick = onChooseGemmaModel,
                         modifier = Modifier.fillMaxWidth(),
@@ -347,7 +432,7 @@ private fun ProfileQuickSettingsSheet(
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Text(
-                            if (gemmaStatus == GemmaModelStatus.NotSet) "Choose Model" else "Change Model"
+                            "Choose Model"
                         )
                     }
                 }
