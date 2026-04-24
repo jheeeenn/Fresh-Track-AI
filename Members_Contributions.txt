@@ -1,0 +1,32 @@
+Work Contribution by Member
+
+Khoo Ian Hong – UI Package
+Built and organized user interface components in the UI package.
+Implemented page-level interaction, user input handling, and display behavior.
+Connected UI elements with logic and AI package results for end-to-end functionality.
+Improved usability and consistency of screens/components across the project.
+
+Wong Yen Ming – Data Package
+Implemented the data package for data models, access operations, and data flow management.
+Handled data retrieval, storage, and mapping required by logic and AI modules.
+Supported cross-package data exchange to ensure reliable integration.
+Helped maintain data consistency and structure for smooth system operation.
+
+Tan Jia Xin – Logic Package
+Developed the core logic package that handles the main application rules and workflows.
+Implemented validation, condition checks, and decision-making flow between modules.
+Connected AI package outputs with data and UI requirements through consistent logic handling.
+Maintained the structure of business logic to keep package interactions stable.
+
+Yap Jun Heen – AI Package
+Designed and implemented the AI package features used in the project.
+Worked on model-related functions, prediction flow, and AI response handling.
+Integrated AI outputs so they can be consumed by the logic and UI packages.
+Helped ensure AI components are modular and reusable within the system.
+
+
+API keys to used in the app
+AIzaSyDPpgWn1LKD8xs6OnvNCE4oaPuY76l--LI
+
+Gemma Model Download (Hugging Face)
+https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/tree/main
