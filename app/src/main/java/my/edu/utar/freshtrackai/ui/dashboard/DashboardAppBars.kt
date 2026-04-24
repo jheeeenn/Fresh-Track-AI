@@ -69,45 +69,15 @@ internal fun DashboardTopBar(
     val controller = LocalDashboardTopBarController.current
     val coroutineScope = rememberCoroutineScope()
     var showSettingsSheet by rememberSaveable { mutableStateOf(false) }
-    var gemmaStatus by rememberSaveable { mutableStateOf(GemmaModelStore.getModelStatus(context).name) }
-
-    val gemmaModelLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri == null) {
-            return@rememberLauncherForActivityResult
-        }
-
-        coroutineScope.launch {
-            controller?.setAiTask(
-                DashboardAiTaskState(
-                    title = "Preparing Gemma 4 Model…",
-                    detail = "Please stay on this page while the model file is copied."
-                )
-            )
-
-            val result = withContext(Dispatchers.IO) {
-                GemmaModelStore.importModelFromUri(context, uri)
-            }
-
-            controller?.setAiTask(null)
-            gemmaStatus = GemmaModelStore.getModelStatus(context).name
-
-            result.exceptionOrNull()?.let {
-                Toast.makeText(
-                    context,
-                    it.message ?: "Failed to import Gemma model.",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
+    var gemmaStatus by rememberSaveable {
+        mutableStateOf(GemmaModelStore.getModelStatus(context).name)
     }
-
     LaunchedEffect(showSettingsSheet) {
         if (showSettingsSheet) {
             gemmaStatus = GemmaModelStore.getModelStatus(context).name
         }
     }
+
 
     Column {
         Row(
@@ -150,7 +120,6 @@ internal fun DashboardTopBar(
             gemmaStatus = GemmaModelStatus.valueOf(gemmaStatus),
             notificationsGranted = NotificationHelper.hasNotificationPermission(context),
             onDismiss = { showSettingsSheet = false },
-            onChooseGemmaModel = { gemmaModelLauncher.launch(arrayOf("*/*")) },
             onOpenNotificationSettings = { NotificationHelper.openNotificationSettings(context) },
             onSendTestNotification = { NotificationHelper.sendTestNotification(context) }
         )
@@ -181,19 +150,17 @@ private fun ProfileQuickSettingsSheet(
     gemmaStatus: GemmaModelStatus,
     notificationsGranted: Boolean,
     onDismiss: () -> Unit,
-    onChooseGemmaModel: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
     onSendTestNotification: () -> Unit
 ) {
     val gemmaStatusLabel = when (gemmaStatus) {
-        GemmaModelStatus.Configured -> "Configured"
-        GemmaModelStatus.MissingFile -> "Missing file"
-        GemmaModelStatus.NotSet -> "Not set"
+        GemmaModelStatus.Ready -> "Ready"
+        GemmaModelStatus.Missing -> "Missing"
     }
+
     val gemmaStatusColor = when (gemmaStatus) {
-        GemmaModelStatus.Configured -> Emerald
-        GemmaModelStatus.MissingFile -> RoseRed
-        GemmaModelStatus.NotSet -> Slate600
+        GemmaModelStatus.Ready -> Emerald
+        GemmaModelStatus.Missing -> RoseRed
     }
 
     ModalBottomSheet(
@@ -247,7 +214,7 @@ private fun ProfileQuickSettingsSheet(
                             )
                         }
                     }
-                    Button(
+                    /*Button(
                         onClick = onChooseGemmaModel,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = Emerald, contentColor = White),
@@ -256,7 +223,15 @@ private fun ProfileQuickSettingsSheet(
                         Text(
                             if (gemmaStatus == GemmaModelStatus.NotSet) "Choose Model" else "Change Model"
                         )
-                    }
+                    }*/
+                    Text(
+                        text = if (gemmaStatus == GemmaModelStatus.Ready) {
+                            "Bundled Gemma model is available for local food and receipt scanning."
+                        } else {
+                            "Bundled Gemma model is missing. Please reinstall the app or check app assets."
+                        },
+                        color = Slate600
+                    )
                 }
             }
 
