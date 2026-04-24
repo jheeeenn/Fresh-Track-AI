@@ -7,53 +7,88 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import my.edu.utar.freshtrackai.ui.dashboard.InventoryItem
-import my.edu.utar.freshtrackai.ui.dashboard.RecipePreferencesUi
+import my.edu.utar.freshtrackai.ui.dashboard.RecipeUi
 
+/**
+ * Manages recipe generation state for the UI.
+ * It handles loading, progress updates, results, and error messages.
+ */
 internal class RecipeGenerationViewModel(
-    private val useCase: GenerateRecipeUiUseCase = GenerateRecipeUiUseCase()
+    private val useCase: GenerateRecipeUiUseCase = GenerateRecipeUiUseCase(),
+    private val initialRecipes: List<RecipeUi> = cachedRecipes,
+    private val recipeGenerator: suspend (
+        inventory: List<InventoryItem>,
+        onStatus: ((String) -> Unit)?
+    ) -> List<RecipeUi> = { inventory, onStatus ->
+        useCase.generateFromInventory(
+            inventory = inventory,
+            onStatus = onStatus
+        )
+    }
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(RecipeGenerationUiState())
+    companion object {
+        // Keeps the last generated recipes so they survive simple ViewModel recreation.
+        private var cachedRecipes: List<RecipeUi> = emptyList()
+    }
+
+    private val _uiState = MutableStateFlow(
+        RecipeGenerationUiState(recipes = initialRecipes)
+    )
     val uiState: StateFlow<RecipeGenerationUiState> = _uiState.asStateFlow()
 
-    fun generateRecipes(
-        inventory: List<InventoryItem>,
-        preferences: RecipePreferencesUi
-    ) {
+    // Starts recipe generation using the current inventory.
+    fun generateRecipes(inventory: List<InventoryItem>) {
         if (inventory.isEmpty()) {
-            _uiState.value = RecipeGenerationUiState(
+            _uiState.value = _uiState.value.copy(
                 isLoading = false,
-                recipes = emptyList(),
-                errorMessage = "No inventory items available."
+                recipes = _uiState.value.recipes,
+                errorMessage = "No inventory items available.",
+                processingMessage = null
             )
             return
         }
 
         viewModelScope.launch {
-            _uiState.value = RecipeGenerationUiState(isLoading = true)
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                errorMessage = null,
+                processingMessage = "Preparing inventory summary..."
+            )
 
             try {
-                val recipes = useCase.generateFromInventory(
-                    inventory = inventory,
-                    preferences = preferences
+                val recipes = recipeGenerator(
+                    inventory,
+                    { status ->
+                        _uiState.value = _uiState.value.copy(processingMessage = status)
+                    }
                 )
 
+                cachedRecipes = recipes
                 _uiState.value = RecipeGenerationUiState(
                     isLoading = false,
                     recipes = recipes,
-                    errorMessage = null
+                    errorMessage = null,
+                    processingMessage = null
                 )
             } catch (e: Exception) {
-                _uiState.value = RecipeGenerationUiState(
+                _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    recipes = emptyList(),
-                    errorMessage = e.message ?: "Failed to generate recipes."
+                    recipes = _uiState.value.recipes,
+                    errorMessage = e.message ?: "Failed to generate recipes.",
+                    processingMessage = null
                 )
             }
         }
     }
 
+    // Clears the current error message after it has been shown to the user.
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+
+    internal fun seedRecipesForTest(recipes: List<RecipeUi>) {
+        cachedRecipes = recipes
+        _uiState.value = _uiState.value.copy(recipes = recipes)
     }
 }

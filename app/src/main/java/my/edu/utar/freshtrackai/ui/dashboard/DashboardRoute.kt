@@ -1,62 +1,97 @@
-﻿package my.edu.utar.freshtrackai.ui.dashboard
+package my.edu.utar.freshtrackai.ui.dashboard
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import java.util.UUID
-
-import my.edu.utar.freshtrackai.ui.theme.FreshTrackAITheme
-
-import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import my.edu.utar.freshtrackai.ai.RecipeGenerationViewModel
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import my.edu.utar.freshtrackai.ai.FoodExtractorProvider
+import my.edu.utar.freshtrackai.ai.FoodReviewMapper
+import my.edu.utar.freshtrackai.ai.RecipeGenerationViewModel
 import my.edu.utar.freshtrackai.ai.ReceiptOcrProvider
 import my.edu.utar.freshtrackai.ai.ReceiptReviewMapper
 import my.edu.utar.freshtrackai.ai.ScanCaptureBitmapResolver
-import my.edu.utar.freshtrackai.ai.FoodExtractorProvider
-import my.edu.utar.freshtrackai.ai.FoodReviewMapper
+import my.edu.utar.freshtrackai.ui.inventory.InventoryViewModel
+import my.edu.utar.freshtrackai.ui.theme.FreshTrackAITheme
 
 @Composable
 fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
+    val coroutineScope = rememberCoroutineScope()
     var screen by rememberSaveable { mutableStateOf(WiseScreen.AppLauncher) }
-    val inventory = remember { mutableStateListOf<InventoryItem>().apply { addAll(seedInventoryItems()) } }
+    val appContext = LocalContext.current.applicationContext
+
+    val inventoryVm: InventoryViewModel = viewModel(
+        factory = InventoryViewModel.Factory(appContext)
+    )
+    val dbItems by inventoryVm.allItems.collectAsState()
+
+    val inventory = remember(dbItems) {
+        mutableStateListOf<InventoryItem>().apply { addAll(dbItems.map { it.toUiModel() }) }
+    }
     val reviewItems = remember { mutableStateListOf<ReviewItemUi>() }
 
-
-    val shoppingListItems = remember { mutableStateListOf<ShoppingListItemUi>().apply { addAll(seedShoppingListItems()) } }
+    val dbShoppingItems by inventoryVm.shoppingItems.collectAsState()
+    val shoppingListItems = remember(dbShoppingItems) {
+        mutableStateListOf<ShoppingListItemUi>().apply {
+            addAll(dbShoppingItems.map { entity ->
+                ShoppingListItemUi(
+                    id = entity.itemId.toString(),
+                    name = entity.name,
+                    sourceRecipeId = entity.sourceRecipeId,
+                    sourceRecipeName = entity.sourceRecipeName,
+                    quantityCount = entity.quantityCount,
+                    checked = entity.checked
+                )
+            })
+        }
+    }
     var expiringSearch by rememberSaveable { mutableStateOf("") }
     var expiringFilter by rememberSaveable { mutableStateOf<InventoryCategory?>(null) }
     var editingReviewItemId by remember { mutableStateOf<String?>(null) }
+    var editingInventoryItemId by remember { mutableStateOf<String?>(null) }
     var addItemOrigin by remember { mutableStateOf(AddItemOrigin.ItemReview) }
     var addFormDraft by remember { mutableStateOf(AddItemFormDraft()) }
     var selectedRecipeId by rememberSaveable { mutableStateOf<String?>(null) }
-    var recipeBackTarget by rememberSaveable { mutableStateOf(WiseScreen.AiRecipes) }
-    var recipePreferences by remember { mutableStateOf(RecipePreferencesUi()) }
-    val recipeViewModel: RecipeGenerationViewModel = viewModel() // new
-    val recipeUiState by recipeViewModel.uiState.collectAsState() // new
+    var activeAiTask by remember { mutableStateOf<DashboardAiTaskState?>(null) }
+    var showScanGuide by remember { mutableStateOf(true) }
+    var showRecipeGuide by remember { mutableStateOf(true) }
+    var showListGuide by remember { mutableStateOf(true) }
+    val recipeViewModel: RecipeGenerationViewModel = viewModel()
+    val recipeUiState by recipeViewModel.uiState.collectAsState()
 
     fun refreshRecipes() {
         recipeViewModel.generateRecipes(
-            inventory = inventory.toList(),
-            preferences = recipePreferences
+            inventory = inventory.toList()
         )
     }
-
 
     LaunchedEffect(recipeUiState.recipes) {
         if (recipeUiState.recipes.isNotEmpty()) {
@@ -65,7 +100,6 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
             }
         }
     }
-
 
     var toastMessage by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
@@ -83,18 +117,28 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
         toastMessage = null
     }
 
-
+    val topBarController = remember(activeAiTask) {
+        DashboardTopBarController(
+            currentAiTask = activeAiTask,
+            setAiTask = { activeAiTask = it }
+        )
+    }
 
     val toRootTab: (RootTab) -> Unit = { tab ->
-        screen = when (tab) {
-            RootTab.Home -> WiseScreen.MainDashboard
-            RootTab.Scan -> WiseScreen.SmartScan
-            RootTab.Recipe -> WiseScreen.AiRecipes
-            RootTab.List -> WiseScreen.ShoppingList
+        if (activeAiTask?.allowNavigationAway != false) {
+            screen = when (tab) {
+                RootTab.Home -> WiseScreen.MainDashboard
+                RootTab.Scan -> WiseScreen.SmartScan
+                RootTab.Recipe -> WiseScreen.AiRecipes
+                RootTab.List -> WiseScreen.ShoppingList
+            }
         }
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
+    CompositionLocalProvider(
+        LocalDashboardTopBarController provides topBarController
+    ) {
+        Box(modifier = modifier.fillMaxSize()) {
         when (screen) {
             WiseScreen.AppLauncher -> AppLauncherScreen { screen = WiseScreen.MainDashboard }
             WiseScreen.MainDashboard -> MainDashboardScreen(
@@ -104,12 +148,26 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                 onScan = { screen = WiseScreen.SmartScan },
                 onAddItem = {
                     addItemOrigin = AddItemOrigin.Dashboard
+                    editingInventoryItemId = null
                     editingReviewItemId = null
                     addFormDraft = AddItemFormDraft()
                     screen = WiseScreen.AddMissingItem
                 },
+                onEditItem = { item ->
+                    addItemOrigin = AddItemOrigin.Dashboard
+                    editingInventoryItemId = item.id
+                    addFormDraft = AddItemFormDraft(
+                        name = item.name,
+                        quantity = item.quantityLabel,
+                        category = item.category,
+                        expiryDate = item.formattedExpiryDate,
+                        nutritionNotes = item.nutritionNotes
+                    )
+                    screen = WiseScreen.AddMissingItem
+                },
                 onTabSelected = toRootTab
             )
+
             WiseScreen.ExpiringSoonAll -> ExpiringSoonAllScreen(
                 inventory = inventory,
                 searchQuery = expiringSearch,
@@ -117,22 +175,24 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                 onSearchQueryChange = { expiringSearch = it },
                 onCategoryChange = { expiringFilter = it },
                 onRecipe = { screen = WiseScreen.AiRecipes },
-                onMarkUsed = { inventoryId -> removeInventoryItem(inventory, inventoryId) },
+                onMarkUsed = { inventoryId ->
+                    inventoryId.toLongOrNull()?.let { inventoryVm.deleteItemById(it) }
+                },
                 onBack = { screen = WiseScreen.MainDashboard },
                 onTabSelected = toRootTab
             )
-            WiseScreen.SmartScan -> SmartScanScreen(
-                onDone = { mode, captures ->
-                    if (captures.isEmpty()) {
-                        toastMessage = "No image captured."
-                        return@SmartScanScreen
-                    }
 
+            WiseScreen.SmartScan -> SmartScanScreen(
+                onDone = { mode, capture ->
                     if (mode == ScanMode.Receipt) {
-                        android.util.Log.d("RECEIPT_FLOW", "Mode = $mode, captures = ${captures.size}")
+                        android.util.Log.d("RECEIPT_FLOW", "Mode = $mode")
                         scope.launch {
+                            activeAiTask = DashboardAiTaskState(
+                                title = "Reading receipt…",
+                                detail = "Please stay on this page while AI finishes."
+                            )
                             try {
-                                val bitmap = ScanCaptureBitmapResolver.resolve(context, captures.first())
+                                val bitmap = ScanCaptureBitmapResolver.resolve(context, capture)
                                 val parsed = ReceiptOcrProvider.get(context).parseReceipt(bitmap)
                                 android.util.Log.d("RECEIPT_FLOW", "Parsed item count = ${parsed.items.size}")
                                 android.util.Log.d("RECEIPT_FLOW", "Parsed items = ${parsed.items}")
@@ -148,13 +208,19 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                                 screen = WiseScreen.ItemReview
                             } catch (e: Exception) {
                                 toastMessage = e.message ?: "Failed to parse receipt."
+                            } finally {
+                                activeAiTask = null
                             }
                         }
                     } else {
-                        android.util.Log.d("FOOD_FLOW", "Mode = $mode, captures = ${captures.size}")
+                        android.util.Log.d("FOOD_FLOW", "Mode = $mode")
                         scope.launch {
+                            activeAiTask = DashboardAiTaskState(
+                                title = "Analyzing food photo…",
+                                detail = "Please stay on this page while AI finishes."
+                            )
                             try {
-                                val bitmap = ScanCaptureBitmapResolver.resolve(context, captures.first())
+                                val bitmap = ScanCaptureBitmapResolver.resolve(context, capture)
                                 val parsed = FoodExtractorProvider.get(context).detectFood(bitmap)
                                 android.util.Log.d("FOOD_FLOW", "Parsed item count = ${parsed.items.size}")
                                 android.util.Log.d("FOOD_FLOW", "Parsed items = ${parsed.items}")
@@ -170,55 +236,114 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                                 screen = WiseScreen.ItemReview
                             } catch (e: Exception) {
                                 toastMessage = e.message ?: "Failed to scan food image."
+                            } finally {
+                                activeAiTask = null
                             }
                         }
                     }
                 },
-                onTabSelected = toRootTab
+                onTabSelected = toRootTab,
+                showGuide = showScanGuide,
+                onDismissGuide = { showScanGuide = false }
             )
+
             WiseScreen.AddMissingItem -> AddMissingItemScreen(
                 draft = addFormDraft,
-                isEditMode = editingReviewItemId != null,
+                isEditMode = editingReviewItemId != null || editingInventoryItemId != null,
                 onDraftChange = { addFormDraft = it },
                 onSubmit = {
-                    when (addItemOrigin) {
-                        AddItemOrigin.ItemReview -> {
-                            val existing = reviewItems.firstOrNull { it.id == editingReviewItemId }
-                            val next = draftToReviewItem(
-                                draft = addFormDraft,
-                                existing = existing,
-                                forcedId = editingReviewItemId
-                            )
-                            val existingIndex = reviewItems.indexOfFirst { it.id == next.id }
-                            if (existingIndex >= 0) {
-                                reviewItems[existingIndex] = next
-                                toastMessage = "Scanned item updated."
-                            } else {
-                                reviewItems.add(next)
-                                toastMessage = "Missing item added."
+                    coroutineScope.launch {
+                        val existingItem = if (addItemOrigin == AddItemOrigin.ItemReview) {
+                            reviewItems.firstOrNull { it.id == editingReviewItemId }
+                        } else {
+                            null
+                        }
+
+                        val needsAiCheck = requiresAiCheck(addFormDraft, existingItem)
+
+                        try {
+                            if (needsAiCheck) {
+                                activeAiTask = DashboardAiTaskState(
+                                    title = "Estimating item details…",
+                                    detail = "Please stay on this page while AI finishes."
+                                )
                             }
-                            addFormDraft = AddItemFormDraft()
-                            editingReviewItemId = null
+                            when (addItemOrigin) {
+                                AddItemOrigin.ItemReview -> {
+                                    val existing = reviewItems.firstOrNull { it.id == editingReviewItemId }
+                                    val next = draftToReviewItem(
+                                        draft = addFormDraft,
+                                        existing = existing,
+                                        forcedId = editingReviewItemId
+                                    )
+                                    val existingIndex = reviewItems.indexOfFirst { it.id == next.id }
+                                    if (existingIndex >= 0) {
+                                        reviewItems[existingIndex] = next
+                                        toastMessage = "Scanned item updated."
+                                    } else {
+                                        reviewItems.add(next)
+                                        toastMessage = "Missing item added."
+                                    }
+                                    addFormDraft = AddItemFormDraft()
+                                    editingReviewItemId = null
+                                    screen = WiseScreen.ItemReview
+                                }
+
+                                AddItemOrigin.Dashboard -> {
+                                    if (editingInventoryItemId != null) {
+                                        val numId = editingInventoryItemId!!.toLongOrNull()
+                                        if (numId != null) {
+                                            val updated = draftToInventoryItem(addFormDraft).copy(itemId = numId)
+                                            inventoryVm.confirmAndEditItem(updated, updated.quantity, updated.expiryDate, updated.notes)
+                                            toastMessage = "Food details updated."
+                                        }
+                                    } else {
+                                        inventoryVm.insertItem(draftToInventoryItem(addFormDraft))
+                                        toastMessage = "Item added to inventory."
+                                    }
+                                    addFormDraft = AddItemFormDraft()
+                                    editingInventoryItemId = null
+                                    screen = WiseScreen.MainDashboard
+                                }
+                            }
+                        } finally {
+                            if (needsAiCheck) {
+                                activeAiTask = null
+                            }
+                        }
+                    }
+                },
+                onDelete = {
+                    coroutineScope.launch {
+                        if (editingInventoryItemId != null) {
+                            editingInventoryItemId!!.toLongOrNull()?.let { inventoryVm.deleteItemById(it) }
+                            toastMessage = "Item deleted from inventory."
+                            screen = WiseScreen.MainDashboard
+                        } else if (editingReviewItemId != null) {
+                            val idx = reviewItems.indexOfFirst { it.id == editingReviewItemId }
+                            if (idx >= 0) {
+                                reviewItems.removeAt(idx)
+                            }
+                            toastMessage = "Scanned item deleted."
                             screen = WiseScreen.ItemReview
                         }
-                        AddItemOrigin.Dashboard -> {
-                            inventory.add(draftToInventoryItem(addFormDraft))
-                            toastMessage = "Item added to inventory."
-                            addFormDraft = AddItemFormDraft()
-                            editingReviewItemId = null
-                            screen = WiseScreen.MainDashboard
-                        }
+                        editingInventoryItemId = null
+                        editingReviewItemId = null
+                        addFormDraft = AddItemFormDraft()
                     }
                 },
                 onBack = {
-                    screen = if (addItemOrigin == AddItemOrigin.ItemReview) {
-                        WiseScreen.ItemReview
-                    } else {
-                        WiseScreen.MainDashboard
+                    if (activeAiTask?.allowNavigationAway != false) {
+                        screen = if (addItemOrigin == AddItemOrigin.ItemReview) {
+                            WiseScreen.ItemReview
+                        } else {
+                            WiseScreen.MainDashboard
+                        }
                     }
                 },
                 onTabSelected = toRootTab
             )
+
             WiseScreen.ItemReview -> ItemReviewScreen(
                 reviewItems = reviewItems,
                 onAddMissingItem = {
@@ -245,7 +370,7 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                 },
                 onSaveToInventory = {
                     if (reviewItems.isNotEmpty()) {
-                        inventory.addAll(reviewItems.map { it.toInventoryItem() })
+                        inventoryVm.insertBulk(reviewItems.map { it.toInventoryItem() })
                         val savedCount = reviewItems.size
                         reviewItems.clear()
                         toastMessage = "$savedCount item(s) saved to inventory."
@@ -254,42 +379,22 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                 },
                 onTabSelected = toRootTab
             )
-            WiseScreen.RecipeViewAll -> RecipeViewAllScreen(
-                inventory = inventory,
-                recipes = recipeUiState.recipes,
-                preferences = recipePreferences,
-                loading = recipeUiState.isLoading,
-                onPreferencesChange = { recipePreferences = it },
-                onRegenerate = { refreshRecipes() },
-                onOpenRecipe = { recipeId ->
-                    selectedRecipeId = recipeId
-                    recipeBackTarget = WiseScreen.RecipeViewAll
-                    screen = WiseScreen.RecipeDetails
-                },
-                onBack = { screen = WiseScreen.AiRecipes },
-                onTabSelected = toRootTab
-            )
+
             WiseScreen.ShoppingList -> ShoppingListScreen(
                 items = shoppingListItems,
                 onItemCheckedChange = { itemId, checked ->
-                    val idx = shoppingListItems.indexOfFirst { it.id == itemId }
-                    if (idx >= 0) {
-                        shoppingListItems[idx] = shoppingListItems[idx].copy(checked = checked)
+                    val dbItem = dbShoppingItems.firstOrNull { it.itemId.toString() == itemId }
+                    if (dbItem != null) {
+                        inventoryVm.toggleShoppingItem(dbItem, checked)
                     }
                 },
                 onAddGeneralItem = { itemName ->
-                    shoppingListItems.add(
-                        ShoppingListItemUi(
-                            id = "shop-${UUID.randomUUID().toString().take(8)}",
-                            name = itemName
-                        )
-                    )
+                    inventoryVm.addShoppingItem(name = itemName)
                     toastMessage = "Added to shopping list."
                 },
                 onClearPurchased = {
-                    val before = shoppingListItems.size
-                    shoppingListItems.removeAll { it.checked }
-                    val removed = before - shoppingListItems.size
+                    val removed = dbShoppingItems.count { it.checked }
+                    inventoryVm.clearPurchasedShoppingItems()
                     toastMessage = if (removed > 0) {
                         "Cleared $removed purchased item(s)."
                     } else {
@@ -297,49 +402,71 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                     }
                     removed
                 },
-                onTabSelected = toRootTab
+                onTabSelected = toRootTab,
+                showGuide = showListGuide,
+                onDismissGuide = { showListGuide = false }
             )
+
             WiseScreen.RecipeDetails -> {
                 val recipe = recipeUiState.recipes.firstOrNull { it.id == selectedRecipeId }
                     ?: recipeUiState.recipes.firstOrNull()
 
                 if (recipe == null) {
-                    screen = recipeBackTarget
+                    LaunchedEffect(Unit) {
+                        screen = WiseScreen.AiRecipes
+                    }
                     return@Box
                 }
                 RecipeDetailsScreen(
                     recipe = recipe,
                     onAddMissingToShoppingList = { current ->
-                        val added = addMissingItemsToShoppingList(
-                            shoppingListItems = shoppingListItems,
-                            recipe = current
-                        )
-                        toastMessage = if (added > 0) {
-                            "$added missing item(s) added to shopping list."
-                        } else {
-                            "All missing ingredients are already in your shopping list."
+                        var affected = 0
+                        current.ingredientsMissing.forEach { ingredient ->
+                            inventoryVm.addShoppingItem(
+                                name = ingredient.name,
+                                sourceRecipeId = current.id,
+                                sourceRecipeName = current.title
+                            )
+                            affected++
                         }
-                        added
+                        affected
                     },
                     onOpenList = { screen = WiseScreen.ShoppingList },
-                    onBack = { screen = recipeBackTarget },
+                    onBack = {
+                        if (activeAiTask?.allowNavigationAway != false) {
+                            screen = WiseScreen.AiRecipes
+                        }
+                    },
                     onTabSelected = toRootTab
                 )
             }
+
             WiseScreen.AiRecipes -> AiRecipesScreen(
-                inventory = inventory,
-                recipes = recipeUiState.recipes.take(4),
+                recipes = recipeUiState.recipes,
                 loading = recipeUiState.isLoading,
+                loadingMessage = recipeUiState.processingMessage,
                 onGenerate = { refreshRecipes() },
-                onViewAll = { screen = WiseScreen.RecipeViewAll },
                 onOpenRecipe = { recipeId ->
                     selectedRecipeId = recipeId
-                    recipeBackTarget = WiseScreen.AiRecipes
                     screen = WiseScreen.RecipeDetails
                 },
-                onTabSelected = toRootTab
+                onTabSelected = toRootTab,
+                showGuide = showRecipeGuide,
+                onDismissGuide = { showRecipeGuide = false }
             )
         }
+
+        activeAiTask?.let { task ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center
+            ) {
+                AiProcessingOverlay(state = task)
+            }
+        }
+    }
     }
 
     val handleDeviceBack: (() -> Unit)? = when (screen) {
@@ -352,13 +479,12 @@ fun FreshTrackDashboardScreen(modifier: Modifier = Modifier) {
                 WiseScreen.MainDashboard
             }
         })
-        WiseScreen.RecipeViewAll -> ({ screen = WiseScreen.AiRecipes })
-        WiseScreen.RecipeDetails -> ({ screen = recipeBackTarget })
+        WiseScreen.RecipeDetails -> ({ screen = WiseScreen.AiRecipes })
         WiseScreen.SmartScan, WiseScreen.AiRecipes, WiseScreen.ShoppingList -> ({ screen = WiseScreen.MainDashboard })
         WiseScreen.MainDashboard, WiseScreen.AppLauncher -> null
     }
 
-    BackHandler(enabled = handleDeviceBack != null) {
+    BackHandler(enabled = handleDeviceBack != null && activeAiTask?.allowNavigationAway != false) {
         handleDeviceBack?.invoke()
     }
 }
@@ -370,4 +496,3 @@ private fun PreviewFreshTrackDashboard() {
         FreshTrackDashboardScreen()
     }
 }
-

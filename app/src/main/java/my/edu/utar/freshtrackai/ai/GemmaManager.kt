@@ -15,6 +15,14 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
 
+/**
+ * Manages the local Gemma model lifecycle for this app.
+ *
+ * This class is responsible for loading the selected LiteRT model file,
+ * creating the engine and conversation session, and sending either
+ * text-only or image-based prompts to the local model.
+ */
+
 internal class GemmaManager(private val context: Context) {
 
     private var engine: Engine? = null
@@ -22,6 +30,12 @@ internal class GemmaManager(private val context: Context) {
     private var initialized = false
     private var initializedWithImageSupport = false
 
+    /**
+     * Loads and initializes the Gemma model if needed.
+     *
+     * If the model is already initialized with the required mode
+     * (text-only or image-enabled), the existing session is reused.
+     */
     suspend fun ensureInitialized(enableImage: Boolean = false): Result<Unit> {
         return withContext(Dispatchers.IO) {
             try {
@@ -46,6 +60,7 @@ internal class GemmaManager(private val context: Context) {
                     )
                 }
 
+                // Reset the previous session before creating a new one.
                 close()
 
                 val engineConfig = EngineConfig(
@@ -75,12 +90,21 @@ internal class GemmaManager(private val context: Context) {
         }
     }
 
+    /**
+     * Sends a plain text prompt to Gemma.
+     * prompt from prompt factory
+     */
     suspend fun sendPrompt(prompt: String): Result<String> {
         return sendContents(
             Contents.of(Content.Text(prompt))
         )
     }
 
+    /**
+     * Sends prepared LiteRT contents to Gemma and collects the streamed response.
+     *
+     * This is the common low-level method used by both text and image prompts.
+     */
     suspend fun sendContents(contents: Contents): Result<String> {
         return withContext(Dispatchers.IO) {
             try {
@@ -102,6 +126,13 @@ internal class GemmaManager(private val context: Context) {
         }
     }
 
+
+    /**
+     * Sends an image together with a text prompt to Gemma.
+     *
+     * The bitmap is converted into PNG bytes before being wrapped
+     * as image content for the model.
+     */
     suspend fun sendImagePrompt(bitmap: Bitmap, prompt: String): Result<String> {
         val imageBytes = bitmap.toPngByteArray()
 
@@ -113,13 +144,18 @@ internal class GemmaManager(private val context: Context) {
         return sendContents(contents)
     }
 
-
+    /**
+     * Converts a bitmap into PNG byte data for model input.
+     */
     private fun Bitmap.toPngByteArray(): ByteArray {
         val stream = ByteArrayOutputStream()
         compress(Bitmap.CompressFormat.PNG, 100, stream)
         return stream.toByteArray()
     }
 
+    /**
+     * Closes the current Gemma session and releases related resources.
+     */
     fun close() {
         try {
             conversation?.close()

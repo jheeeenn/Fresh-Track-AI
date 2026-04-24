@@ -1,18 +1,28 @@
-﻿package my.edu.utar.freshtrackai.ui.dashboard
+package my.edu.utar.freshtrackai.ui.dashboard
 
-import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.ui.graphics.Color
 
+// ─────────────────────────────────────────────────────────────
+// FIX: Aligned UI Categories with Member 3's ShelfLifeRules.kt
+// Now both the UI and Backend have the exact same 15 categories!
+// ─────────────────────────────────────────────────────────────
 internal enum class InventoryCategory(val label: String) {
-    Produce("Produce"),
     Dairy("Dairy"),
-    MeatProtein("Meat & Protein"),
-    Beverages("Beverages"),
-    PantryDryGoods("Pantry & Dry Goods"),
-    Frozen("Frozen"),
+    Eggs("Eggs"),
+    MeatPoultry("Meat & Poultry"),
+    Seafood("Seafood"),
+    Fruits("Fruits"),
+    Vegetables("Vegetables"),
     Bakery("Bakery"),
-    CondimentsSauces("Condiments & Sauces")
+    GrainsPasta("Grains & Pasta"),
+    CannedGoods("Canned Goods"),
+    Frozen("Frozen"),
+    Beverages("Beverages"),
+    Condiments("Condiments & Sauces"),
+    Snacks("Snacks"),
+    Leftovers("Leftovers"),
+    Other("Other")
 }
 
 internal enum class ExpiryBadge(val label: String, val textColor: Color, val bgColor: Color) {
@@ -28,7 +38,11 @@ internal data class InventoryItem(
     val quantityLabel: String,
     val addedDaysAgo: Int,
     val expiresInDays: Int,
-    val thumbnailRef: String
+    val thumbnailRef: String,
+    val nutritionNotes: String = "",
+    val formattedExpiryDate: String = "",
+    val formattedAddedDate: String = "",
+    val purchaseDateMillis: Long = 0L
 )
 
 internal data class ExpiringItem(
@@ -60,7 +74,8 @@ internal enum class AddItemOrigin {
 internal data class AddItemFormDraft(
     val name: String = "",
     val quantity: String = "",
-    val category: InventoryCategory = InventoryCategory.Produce,
+    // FIX: Updated the default category from 'Produce' to 'Vegetables' to match the new enum
+    val category: InventoryCategory = InventoryCategory.Vegetables,
     val expiryDate: String = "",
     val nutritionNotes: String = ""
 )
@@ -86,18 +101,12 @@ internal data class RecipeUi(
     val avoidanceTokens: Set<String>
 )
 
-internal data class RecipePreferencesUi(
-    val selectedInventoryItemIds: Set<String> = emptySet(),
-    val inventoryOnly: Boolean = false,
-    val avoidancePresetSet: Set<String> = emptySet(),
-    val avoidanceCustomText: String = ""
-)
-
 internal data class ShoppingListItemUi(
     val id: String,
     val name: String,
     val sourceRecipeId: String? = null,
     val sourceRecipeName: String? = null,
+    val quantityCount: Int = 1,
     val checked: Boolean = false
 )
 

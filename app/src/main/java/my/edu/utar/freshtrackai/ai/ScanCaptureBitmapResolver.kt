@@ -7,8 +7,15 @@ import android.os.Build
 import android.provider.MediaStore
 import my.edu.utar.freshtrackai.ui.dashboard.ScanCapture
 
+
+/**
+ * Converts a scan capture into a Bitmap for AI processing.
+ * Both camera and gallery captures are resolved from their stored Uri.
+ */
+
 internal object ScanCaptureBitmapResolver {
 
+    // Loads the image referenced by ScanCapture and decodes it as a Bitmap.
     fun resolve(context: Context, capture: ScanCapture): Bitmap {
         val uri = when (capture) {
             is ScanCapture.Camera -> capture.uri

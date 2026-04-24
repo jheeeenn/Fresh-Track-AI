@@ -1,13 +1,12 @@
-﻿package my.edu.utar.freshtrackai.ui.dashboard
+package my.edu.utar.freshtrackai.ui.dashboard
 
+import android.content.Context
 import android.net.Uri
-import android.widget.ImageView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,39 +17,27 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.FlashOff
-import androidx.compose.material.icons.outlined.FlashOn
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.RestartAlt
-import androidx.compose.material3.AlertDialog
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedIconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -60,45 +47,33 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import java.util.UUID
-import my.edu.utar.freshtrackai.R
-
-import android.content.Context
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import androidx.compose.foundation.layout.*
+import java.util.UUID
 
 @Composable
 internal fun SmartScanScreen(
-    onDone: (ScanMode, List<ScanCapture>) -> Unit,
-    onTabSelected: (RootTab) -> Unit
+    onDone: (ScanMode, ScanCapture) -> Unit,
+    onTabSelected: (RootTab) -> Unit,
+    showGuide: Boolean,
+    onDismissGuide: () -> Unit
 ) {
-    val maxPhotos = 4
     var scanMode by rememberSaveable { mutableStateOf(ScanMode.Food) }
-    var gemmaConnected by rememberSaveable { mutableStateOf(true) }
-    var flashOn by rememberSaveable { mutableStateOf(false) }
-    var helperText by rememberSaveable { mutableStateOf("Align food items within the frame") }
-
-    val captures = remember { mutableStateListOf<ScanCapture>() }
-    val pendingQueue = remember { mutableStateListOf<ScanCapture>() }
-    var reviewCapture by remember { mutableStateOf<ScanCapture?>(null) }
-    var showDonePrompt by rememberSaveable { mutableStateOf(false) }
+    var helperText by rememberSaveable { mutableStateOf("Open camera or gallery to start scanning.") }
+    var selectedCapture by remember { mutableStateOf<ScanCapture?>(null) }
+    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
 
     val context = LocalContext.current
-    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
 
     fun createTempImageUri(context: Context): Uri {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
@@ -114,69 +89,73 @@ internal fun SmartScanScreen(
         )
     }
 
-    fun slotUsedCount(): Int = captures.size + pendingQueue.size + if (reviewCapture != null) 1 else 0
-    fun maxReached(): Boolean = slotUsedCount() >= maxPhotos
-    fun popNextReview() {
-        reviewCapture = if (pendingQueue.isNotEmpty()) pendingQueue.removeAt(0) else null
-    }
-    fun enqueueForReview(newCaptures: List<ScanCapture>) {
-        if (newCaptures.isEmpty()) return
-        pendingQueue.addAll(newCaptures)
-        if (reviewCapture == null) {
-            popNextReview()
-        }
+    fun updateSelection(capture: ScanCapture, message: String) {
+        selectedCapture = capture
+        helperText = message
     }
 
-    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
-        val remaining = maxPhotos - slotUsedCount()
-        if (remaining <= 0) {
-            helperText = "Maximum 4 photos reached."
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri == null) {
+            helperText = "Gallery selection canceled."
             return@rememberLauncherForActivityResult
         }
-        val selected = uris.take(remaining).map { uri ->
-            ScanCapture.Gallery(id = UUID.randomUUID().toString(), uri = uri)
-        }
-        if (uris.size > remaining) {
-            helperText = "Only $remaining photo(s) added. Max is 4."
-        } else if (selected.isNotEmpty()) {
-            helperText = "Photo selected. Review before continuing."
-        }
-        enqueueForReview(selected)
+
+        updateSelection(
+            capture = ScanCapture.Gallery(
+                id = UUID.randomUUID().toString(),
+                uri = uri
+            ),
+            message = if (scanMode == ScanMode.Food) {
+                "Food image selected. Use this photo when it looks clear."
+            } else {
+                "Receipt image selected. Use this photo when the text is readable."
+            }
+        )
     }
 
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         val uri = pendingCameraUri
+        pendingCameraUri = null
+
         if (!success || uri == null) {
             helperText = "Camera capture canceled."
-            pendingCameraUri = null
             return@rememberLauncherForActivityResult
         }
-        if (maxReached()) {
-            helperText = "Maximum 4 photos reached."
-            pendingCameraUri = null
-            return@rememberLauncherForActivityResult
-        }
-        enqueueForReview(
-            listOf(
-                ScanCapture.Camera(
-                    id = UUID.randomUUID().toString(),
-                    uri = uri
-                )
-            )
+
+        updateSelection(
+            capture = ScanCapture.Camera(
+                id = UUID.randomUUID().toString(),
+                uri = uri
+            ),
+            message = if (scanMode == ScanMode.Food) {
+                "Food photo captured. Check framing before continuing."
+            } else {
+                "Receipt photo captured. Check that the receipt text is visible."
+            }
         )
-        helperText = "Photo captured. Review before continuing."
-        pendingCameraUri = null
     }
 
-    val lensLabel = when {
-        !gemmaConnected -> "GEMMA 4 OFFLINE"
-        scanMode == ScanMode.Food -> "AI LENS ACTIVE"
-        else -> "RECEIPT AI ACTIVE"
+    val modeTitle = if (scanMode == ScanMode.Food) "Scan Food" else "Scan Receipt"
+    val modeBadge = if (scanMode == ScanMode.Food) "FOOD DETECTION" else "RECEIPT OCR"
+    val modeDescription = if (scanMode == ScanMode.Food) {
+        "Use one clear photo of the food item. Keep the item centered and avoid dark shadows."
+    } else {
+        "Use one clear photo of the receipt. Make sure the receipt is flat and the printed text is readable."
+    }
+    val frameHint = if (scanMode == ScanMode.Food) {
+        "Align the food item inside the frame."
+    } else {
+        "Align the full receipt inside the frame."
     }
 
-    Scaffold(topBar = { DashboardTopBar() }, bottomBar = { BottomNav(RootTab.Scan, onTabSelected) }) { p ->
+    Scaffold(
+        topBar = { DashboardTopBar() },
+        bottomBar = { BottomNav(RootTab.Scan, onTabSelected) }
+    ) { padding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(p),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -190,23 +169,33 @@ internal fun SmartScanScreen(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Button(
-                        onClick = { scanMode = ScanMode.Food },
+                        onClick = {
+                            scanMode = ScanMode.Food
+                            helperText = "Open camera or gallery to start scanning."
+                        },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(999.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (scanMode == ScanMode.Food) Emerald else Color.Transparent,
                             contentColor = if (scanMode == ScanMode.Food) White else Slate900
                         )
-                    ) { Text("Scan Food", fontWeight = FontWeight.Bold) }
+                    ) {
+                        Text("Scan Food", fontWeight = FontWeight.Bold)
+                    }
                     Button(
-                        onClick = { scanMode = ScanMode.Receipt },
+                        onClick = {
+                            scanMode = ScanMode.Receipt
+                            helperText = "Open camera or gallery to start scanning."
+                        },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(999.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (scanMode == ScanMode.Receipt) Emerald else Color.Transparent,
                             contentColor = if (scanMode == ScanMode.Receipt) White else Slate900
                         )
-                    ) { Text("Scan Receipt", fontWeight = FontWeight.Bold) }
+                    ) {
+                        Text("Scan Receipt", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 
@@ -215,241 +204,235 @@ internal fun SmartScanScreen(
                     shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(containerColor = Slate900)
                 ) {
-                    Box(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .aspectRatio(0.72f)
                             .background(
                                 if (scanMode == ScanMode.Food) {
-                                    androidx.compose.ui.graphics.Brush.verticalGradient(
-                                        listOf(Color(0xFF295F2D), Color(0xFF1E3A2E), Color(0xFF0F172A))
+                                    Brush.verticalGradient(
+                                        listOf(Color(0xFF285F2E), Color(0xFF183B2B), Color(0xFF0F172A))
                                     )
                                 } else {
-                                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    Brush.verticalGradient(
                                         listOf(Color(0xFF334155), Color(0xFF1E293B), Color(0xFF0F172A))
                                     )
                                 }
                             )
+                            .padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Row(
-                            modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .padding(12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(999.dp))
-                                    .background(Color(0x99000000))
-                                    .clickable { gemmaConnected = !gemmaConnected }
+                                    .background(Color(0x33000000))
                                     .padding(horizontal = 12.dp, vertical = 6.dp)
                             ) {
                                 Text(
-                                    lensLabel,
-                                    color = if (gemmaConnected) White else RoseRed,
+                                    modeBadge,
+                                    color = White,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp
+                                    fontSize = 12.sp,
+                                    letterSpacing = 1.sp
                                 )
+                            }
+                            if (selectedCapture != null) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.CheckCircle,
+                                        contentDescription = null,
+                                        tint = Color(0xFF86EFAC),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        "Photo ready",
+                                        color = Color(0xFFDCFCE7),
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 12.sp
+                                    )
+                                }
                             }
                         }
 
-                        IconButton(
-                            onClick = { flashOn = !flashOn },
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(12.dp)
-                                .clip(CircleShape)
-                                .background(Color(0x66000000))
-                        ) {
-                            Icon(
-                                imageVector = if (flashOn) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
-                                contentDescription = "Flash",
-                                tint = White
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = modeTitle,
+                                color = White,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 28.sp
+                            )
+                            Text(
+                                text = modeDescription,
+                                color = Color(0xFFD1D5DB),
+                                fontSize = 14.sp
                             )
                         }
 
                         Box(
                             modifier = Modifier
-                                .align(Alignment.Center)
-                                .fillMaxWidth(0.82f)
-                                .height(240.dp)
-                                .border(2.dp, Emerald, RoundedCornerShape(8.dp))
-                        )
+                                .fillMaxWidth()
+                                .aspectRatio(0.82f)
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(Color(0x14000000))
+                                .border(
+                                    border = BorderStroke(2.dp, Emerald),
+                                    shape = RoundedCornerShape(20.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (selectedCapture == null) {
+                                Column(
+                                    modifier = Modifier.padding(24.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(88.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0x22FFFFFF)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = if (scanMode == ScanMode.Food) {
+                                                Icons.Outlined.CameraAlt
+                                            } else {
+                                                Icons.Outlined.PhotoLibrary
+                                            },
+                                            contentDescription = null,
+                                            tint = Emerald,
+                                            modifier = Modifier.size(40.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = frameHint,
+                                        color = White,
+                                        textAlign = TextAlign.Center,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                    Text(
+                                        text = helperText,
+                                        color = Color(0xFFD1D5DB),
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color(0x16000000)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    AsyncImage(
+                                        model = when (val capture = selectedCapture) {
+                                            is ScanCapture.Camera -> capture.uri
+                                            is ScanCapture.Gallery -> capture.uri
+                                            null -> null
+                                        },
+                                        contentDescription = "Selected scan image",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                }
+                            }
+                        }
 
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .offset(y = 80.dp)
-                                .size(72.dp)
-                                .border(3.dp, Emerald, CircleShape)
+                        Text(
+                            text = helperText,
+                            color = White,
+                            fontWeight = FontWeight.SemiBold,
+                            lineHeight = 20.sp
                         )
 
                         Row(
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(bottom = 84.dp),
-                            horizontalArrangement = Arrangement.spacedBy(20.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            OutlinedIconButton(
+                            OutlinedButton(
                                 onClick = { galleryLauncher.launch("image/*") },
-                                enabled = !maxReached(),
-                                modifier = Modifier.size(52.dp),
-                                border = BorderStroke(1.dp, Color(0x66FFFFFF))
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(60.dp),
+                                border = BorderStroke(1.dp, Color(0x66FFFFFF)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = White),
+                                contentPadding = PaddingValues(0.dp)
                             ) {
-                                Icon(Icons.Outlined.PhotoLibrary, contentDescription = "Gallery", tint = White)
+                                Icon(Icons.Outlined.PhotoLibrary, contentDescription = "Open Gallery")
                             }
-
                             Button(
                                 onClick = {
                                     val uri = createTempImageUri(context)
                                     pendingCameraUri = uri
                                     cameraLauncher.launch(uri)
                                 },
-                                enabled = !maxReached(),
-                                shape = CircleShape,
-                                colors = ButtonDefaults.buttonColors(containerColor = White, contentColor = Emerald),
                                 modifier = Modifier
-                                    .size(92.dp)
-                                    .border(5.dp, Emerald, CircleShape)
+                                    .weight(1f)
+                                    .height(60.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = White, contentColor = Emerald),
+                                contentPadding = PaddingValues(0.dp)
                             ) {
-                                Icon(Icons.Outlined.CameraAlt, contentDescription = "Capture", modifier = Modifier.size(36.dp))
-                            }
-
-                            OutlinedIconButton(
-                                onClick = {
-                                    if (captures.isNotEmpty()) {
-                                        captures.removeAt(captures.lastIndex)
-                                        helperText = "Last photo removed."
-                                    } else {
-                                        helperText = "No previous capture."
-                                    }
-                                },
-                                modifier = Modifier.size(52.dp),
-                                border = BorderStroke(1.dp, Color(0x66FFFFFF))
-                            ) {
-                                Icon(Icons.Outlined.RestartAlt, contentDescription = "Undo", tint = White)
+                                Icon(Icons.Outlined.CameraAlt, contentDescription = "Open Camera")
                             }
                         }
 
-                        Text(
-                            text = helperText.uppercase(),
-                            color = White,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp,
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(bottom = 26.dp)
-                        )
+                        if (selectedCapture != null) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = {
+                                        selectedCapture = null
+                                        helperText = "Open camera or gallery to start scanning."
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(60.dp),
+                                    border = BorderStroke(1.dp, Color(0x66FFFFFF)),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = White),
+                                    contentPadding = PaddingValues(0.dp)
+                                ) {
+                                    Icon(Icons.Outlined.RestartAlt, contentDescription = "Retake")
+                                }
+                                Button(
+                                    onClick = {
+                                        selectedCapture?.let { onDone(scanMode, it) }
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(60.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Emerald, contentColor = White),
+                                    contentPadding = PaddingValues(0.dp)
+                                ) {
+                                    Icon(Icons.Outlined.CheckCircle, contentDescription = "Use Photo")
+                                }
+                            }
+                        }
                     }
                 }
             }
 
-            item {
-                SmartTipCard(
-                    title = "SMART TIP",
-                    message = "Scanning multiple items? Tap capture for each item. Fresh Track groups them in one inventory batch automatically."
-                )
-            }
-
-            item {
-                Card(
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = White),
-                    border = BorderStroke(1.dp, Gray200)
-                ) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            "Captured ${captures.size}/$maxPhotos • target for Gemma 4: 1536px long edge (frontend target)",
-                            color = Slate600,
-                            fontSize = 12.sp
-                        )
-                        if (captures.isNotEmpty()) {
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                items(captures, key = { it.id }) { cap ->
-                                    CapturePreview(cap, modifier = Modifier.size(72.dp).clip(RoundedCornerShape(10.dp)))
-                                }
-                            }
-                            Button(
-                                onClick = { onDone(scanMode, captures.toList()) },
-                                colors = ButtonDefaults.buttonColors(containerColor = Emerald, contentColor = White),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Done Scanning")
-                            }
-                        }
-                    }
+            if (showGuide) {
+                item {
+                    SmartTipCard(
+                        title = "SCAN GUIDE",
+                        message = if (scanMode == ScanMode.Food) {
+                            "Use Camera or Gallery, make sure the item is clear, then confirm the photo before AI starts."
+                        } else {
+                            "Use one flat receipt photo, keep the full receipt visible, then confirm the photo before OCR starts."
+                        },
+                        onDismiss = onDismissGuide
+                    )
                 }
             }
         }
     }
-
-    if (reviewCapture != null) {
-        val current = reviewCapture!!
-        AlertDialog(
-            onDismissRequest = {
-                popNextReview()
-            },
-            title = { Text("Review Capture", fontWeight = FontWeight.Bold) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    CapturePreview(
-                        capture = current,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(220.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                    )
-                    Text("Photo ${captures.size + 1} of $maxPhotos. Keep this image?", color = Slate600)
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    captures.add(current)
-                    popNextReview()
-                    showDonePrompt = true
-                    helperText = "Captured ${captures.size}/$maxPhotos"
-                }) { Text("Use Photo") }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    popNextReview()
-                    helperText = "Photo discarded."
-                }) { Text("Discard") }
-            }
-        )
-    }
-
-    if (showDonePrompt) {
-        AlertDialog(
-            onDismissRequest = { showDonePrompt = false },
-            title = { Text("Capture complete", fontWeight = FontWeight.Bold) },
-            text = { Text("Done scanning, or take another photo?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDonePrompt = false
-                    onDone(scanMode, captures.toList())
-                }) { Text("Done") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDonePrompt = false }) { Text("Take Another") }
-            }
-        )
-    }
 }
-
-@Composable
-private fun CapturePreview(capture: ScanCapture, modifier: Modifier = Modifier) {
-    val model = when (capture) {
-        is ScanCapture.Camera -> capture.uri
-        is ScanCapture.Gallery -> capture.uri
-    }
-
-    AsyncImage(
-        model = model,
-        contentDescription = "Captured image",
-        modifier = modifier,
-        contentScale = ContentScale.Crop
-    )
-}
-
