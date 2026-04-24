@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -42,8 +43,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -138,7 +139,8 @@ internal fun SmartTipCard(
     message: String,
     actionText: String? = null,
     actionLoading: Boolean = false,
-    onAction: (() -> Unit)? = null
+    onAction: (() -> Unit)? = null,
+    onDismiss: (() -> Unit)? = null
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Gray100),
@@ -164,11 +166,28 @@ internal fun SmartTipCard(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Text(title.uppercase(), color = Emerald, fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 2.sp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(title.uppercase(), color = Emerald, fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 2.sp)
+                    if (onDismiss != null) {
+                        Icon(
+                            Icons.Outlined.Close,
+                            contentDescription = "Dismiss guide",
+                            tint = Slate600,
+                            modifier = Modifier
+                                .size(18.dp)
+                                .clickable(onClick = onDismiss)
+                        )
+                    }
+                }
                 Text(message, color = Slate600)
                 if (actionText != null && onAction != null) {
                     Button(
                         onClick = onAction,
+                        enabled = !actionLoading,
                         colors = ButtonDefaults.buttonColors(containerColor = Emerald, contentColor = White),
                         shape = RoundedCornerShape(10.dp)
                     ) {
@@ -185,6 +204,83 @@ internal fun SmartTipCard(
                         Text(actionText, fontWeight = FontWeight.Bold)
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun AiProcessingOverlay(
+    state: DashboardAiTaskState,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(Color.Black.copy(alpha = 0.46f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = White),
+            modifier = Modifier.padding(24.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                CircularProgressIndicator(color = Emerald)
+                Text(
+                    text = state.title,
+                    color = Slate900,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = state.detail,
+                    color = Slate600,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun RecipeProcessingBanner(
+    message: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Gray100),
+        border = BorderStroke(1.dp, Gray200),
+        shape = RoundedCornerShape(14.dp),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                strokeWidth = 2.dp,
+                color = Emerald
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    "Recipe Generation In Progress",
+                    color = Slate900,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(message, color = Slate600)
+                Text(
+                    "You can stay here, or leave this tab and come back later.",
+                    color = Slate600,
+                    fontSize = 12.sp
+                )
             }
         }
     }

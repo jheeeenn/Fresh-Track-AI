@@ -10,6 +10,19 @@ class InventoryRepository(
     private val inventoryDao: InventoryDao,
     private val shoppingDao: ShoppingDao
 ) {
+    private fun normalizeShoppingName(name: String): String = name.trim().lowercase()
+
+    private fun mergeRecipeSource(
+        existing: String?,
+        incoming: String?
+    ): String? {
+        return when {
+            incoming.isNullOrBlank() -> existing
+            existing.isNullOrBlank() -> incoming
+            existing.equals(incoming, ignoreCase = true) -> existing
+            else -> "Multiple Recipes"
+        }
+    }
 
     val allItems: Flow<List<InventoryItem>> = inventoryDao.getAllItems()
     val allShoppingItems: Flow<List<ShoppingItemEntity>> = shoppingDao.getAllShoppingItems()
@@ -36,6 +49,36 @@ class InventoryRepository(
 
     suspend fun deleteItem(item: InventoryItem) {
         inventoryDao.deleteItem(item)
+    }
+
+    suspend fun addOrMergeShoppingItem(
+        name: String,
+        sourceRecipeId: String? = null,
+        sourceRecipeName: String? = null
+    ): Long {
+        val normalizedName = normalizeShoppingName(name)
+        val existing = shoppingDao.getItemByNormalizedName(normalizedName)
+
+        return if (existing != null) {
+            shoppingDao.updateItem(
+                existing.copy(
+                    quantityCount = existing.quantityCount + 1,
+                    sourceRecipeId = existing.sourceRecipeId ?: sourceRecipeId,
+                    sourceRecipeName = mergeRecipeSource(existing.sourceRecipeName, sourceRecipeName),
+                    checked = false
+                )
+            )
+            existing.itemId
+        } else {
+            shoppingDao.insertItem(
+                ShoppingItemEntity(
+                    name = name,
+                    normalizedName = normalizedName,
+                    sourceRecipeId = sourceRecipeId,
+                    sourceRecipeName = sourceRecipeName
+                )
+            )
+        }
     }
 
     suspend fun insertShoppingItem(item: ShoppingItemEntity) = shoppingDao.insertItem(item)

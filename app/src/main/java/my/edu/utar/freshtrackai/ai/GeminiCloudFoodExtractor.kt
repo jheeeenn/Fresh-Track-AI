@@ -3,11 +3,11 @@ package my.edu.utar.freshtrackai.ai
 import android.util.Log
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.gson.Gson
+import com.google.gson.JsonParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import my.edu.utar.freshtrackai.ai.model.RecipeSuggestionResult
-import my.edu.utar.freshtrackai.ai.util.PromptFactory
 
 
 /**
@@ -16,7 +16,14 @@ import my.edu.utar.freshtrackai.ai.util.PromptFactory
  */
 
 class GeminiCloudFoodExtractor(
-    private val apiKey: String
+    private val apiKey: String,
+    private val generateContentBlock: suspend GeminiCloudFoodExtractor.(String) -> String = { promptText ->
+        generativeModel.generateContent(promptText).text.orEmpty().trim()
+    },
+    private val localFallbackBlock:
+    suspend GeminiCloudFoodExtractor.(String, ((String) -> Unit)?) -> RecipeSuggestionResult = { promptText, onStatus ->
+        generateWithLocalGemma(promptText, onStatus)
+    }
 ) : CloudFoodExtractor {
 
     private val gson = Gson()
@@ -29,34 +36,41 @@ class GeminiCloudFoodExtractor(
     }
 
     override suspend fun suggestRecipes(
-        inventorySummary: String,
+        promptText: String,
         onStatus: ((String) -> Unit)?
     ): RecipeSuggestionResult {
         return withContext(Dispatchers.IO) {
-            val prompt = PromptFactory.recipePrompt(inventorySummary)
+            if (apiKey.isBlank()) {
+                return@withContext fallbackToLocalGemma(
+                    promptText = promptText,
+                    failureKind = GeminiFailureKind.MissingKey,
+                    onStatus = onStatus,
+                    cause = null
+                )
+            }
+
             val maxAttempts = 3
             var lastError: Throwable? = null
-            var geminiAttempts = 0
+            var failureKind = GeminiFailureKind.Unknown
 
             for (attempt in 0 until maxAttempts) {
                 try {
-                    geminiAttempts += 1
                     Log.d("GEMINI_RECIPE", "Calling Gemini attempt ${attempt + 1}/$maxAttempts")
                     onStatus?.invoke("Generating recipes with Gemini (${attempt + 1}/$maxAttempts)...")
-                    val response = generativeModel.generateContent(prompt)
-                    val text = response.text.orEmpty().trim()
+                    val text = generateContentBlock(promptText)
 
                     if (text.isBlank()) {
                         error("Gemini returned an empty response")
                     }
 
                     Log.d("GEMINI_RECIPE", "Gemini recipe generation succeeded")
-                    return@withContext parseRecipeJson(text)
+                    return@withContext parseRecipeJson(text, source = "Gemini")
                 } catch (t: Throwable) {
                     lastError = t
+                    failureKind = classifyGeminiFailure(t)
                     Log.w("GEMINI_RECIPE", "Gemini attempt ${attempt + 1} failed", t)
 
-                    val shouldRetry = isServiceUnavailable(t) && attempt < maxAttempts - 1
+                    val shouldRetry = failureKind == GeminiFailureKind.Busy && attempt < maxAttempts - 1
                     if (!shouldRetry) {
                         break
                     }
@@ -71,23 +85,50 @@ class GeminiCloudFoodExtractor(
                 }
             }
 
-            // Fallback to local Gemma if Gemini failed after retry attempts.
-            //
-            onStatus?.invoke("Gemini failed. Switching to local Gemma model...")
-            val localFallback = runCatching { generateWithLocalGemma(prompt, onStatus) }
-            localFallback.getOrNull()?.let { return@withContext it }
-
-            Log.e(
-                "GEMINI_RECIPE",
-                "Gemini failed and local Gemma fallback failed.",
-                localFallback.exceptionOrNull()
-            )
-
-            throw IllegalStateException(
-                "Failed to generate recipe suggestions after retries.",
-                lastError
+            return@withContext fallbackToLocalGemma(
+                promptText = promptText,
+                failureKind = failureKind,
+                onStatus = onStatus,
+                cause = lastError
             )
         }
+    }
+
+    private suspend fun fallbackToLocalGemma(
+        promptText: String,
+        failureKind: GeminiFailureKind,
+        onStatus: ((String) -> Unit)?,
+        cause: Throwable?
+    ): RecipeSuggestionResult {
+        onStatus?.invoke(fallbackStatusMessage(failureKind))
+        val localFallback = runCatching { localFallbackBlock(promptText, onStatus) }
+        localFallback.getOrNull()?.let { return it }
+
+        val fallbackError = localFallback.exceptionOrNull() ?: cause
+        Log.e(
+            "GEMINI_RECIPE",
+            "Gemini path failed with $failureKind and local Gemma fallback failed.",
+            fallbackError
+        )
+
+        val message = when (failureKind) {
+            GeminiFailureKind.MissingKey ->
+                "Gemini is not configured and local Gemma fallback failed."
+
+            GeminiFailureKind.InvalidKey ->
+                "Gemini authentication failed and local Gemma fallback failed."
+
+            GeminiFailureKind.QuotaExhausted ->
+                "Gemini quota is exhausted and local Gemma fallback failed."
+
+            GeminiFailureKind.Busy ->
+                "Gemini remained unavailable and local Gemma fallback failed."
+
+            GeminiFailureKind.Unknown ->
+                "Gemini failed and local Gemma fallback failed."
+        }
+
+        throw IllegalStateException(message, fallbackError)
     }
 
     // Generates recipes locally when the cloud service is unavailable.
@@ -108,28 +149,88 @@ class GeminiCloudFoodExtractor(
             val raw = gemmaManager.sendPrompt(prompt)
                 .getOrElse { throw it }
 
-            return parseRecipeJson(raw)
+            return parseRecipeJson(raw, source = "local Gemma")
         } finally {
             gemmaManager.close()
         }
     }
 
     // Cleans and parses the JSON returned by the model.
-    private fun parseRecipeJson(rawText: String): RecipeSuggestionResult {
-        val cleanedJson = rawText
+    private fun parseRecipeJson(rawText: String, source: String): RecipeSuggestionResult {
+        val extractedJson = extractFirstJsonObject(rawText, source)
+        val jsonElement = try {
+            JsonParser.parseString(extractedJson)
+        } catch (e: Exception) {
+            throw IllegalStateException("$source returned malformed recipe JSON.", e)
+        }
+
+        if (!jsonElement.isJsonObject) {
+            throw IllegalStateException("$source returned malformed recipe JSON.")
+        }
+
+        val jsonObject = jsonElement.asJsonObject
+        if (!jsonObject.has("recipes") || !jsonObject.get("recipes").isJsonArray) {
+            throw IllegalStateException("$source returned malformed recipe JSON.")
+        }
+
+        return try {
+            gson.fromJson(extractedJson, RecipeSuggestionResult::class.java)
+        } catch (e: Exception) {
+            throw IllegalStateException("$source returned malformed recipe JSON.", e)
+        }
+    }
+
+    private fun extractFirstJsonObject(rawText: String, source: String): String {
+        val cleanedText = rawText
             .trim()
             .removePrefix("```json")
             .removePrefix("```")
             .removeSuffix("```")
             .trim()
 
-        return gson.fromJson(cleanedJson, RecipeSuggestionResult::class.java)
+        var startIndex = -1
+        var depth = 0
+        var inString = false
+        var escaped = false
+
+        cleanedText.forEachIndexed { index, char ->
+            if (startIndex == -1) {
+                if (char == '{') {
+                    startIndex = index
+                    depth = 1
+                }
+                return@forEachIndexed
+            }
+
+            if (escaped) {
+                escaped = false
+                return@forEachIndexed
+            }
+
+            if (char == '\\' && inString) {
+                escaped = true
+                return@forEachIndexed
+            }
+
+            if (char == '"') {
+                inString = !inString
+                return@forEachIndexed
+            }
+
+            if (!inString) {
+                when (char) {
+                    '{' -> depth += 1
+                    '}' -> {
+                        depth -= 1
+                        if (depth == 0) {
+                            return cleanedText.substring(startIndex, index + 1)
+                        }
+                    }
+                }
+            }
+        }
+
+        throw IllegalStateException("$source returned malformed recipe JSON.")
     }
 
-    // Checks whether the error is a temporary service-side availability issue --> error 503.
-    private fun isServiceUnavailable(throwable: Throwable): Boolean {
-        val errorMessage = throwable.message.orEmpty()
-        return errorMessage.contains("503") ||
-            errorMessage.contains("UNAVAILABLE", ignoreCase = true)
-    }
 }

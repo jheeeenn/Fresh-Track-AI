@@ -12,21 +12,17 @@ import java.util.UUID
 
 internal object RecipeUiMapper {
     // Maps all generated recipes into UI models.
-    internal fun mapRecipes(
-        recipes: List<RecipeDto>,
-        selectedInventoryIds: Set<String> = emptySet()
-    ): List<RecipeUi> {
+    internal fun mapRecipes(recipes: List<RecipeDto>): List<RecipeUi> {
         return recipes.mapIndexed { index, recipe ->
             recipe.toRecipeUi(
-                generatedId = "ai-${index + 1}-${UUID.randomUUID().toString().take(6)}",
-                selectedInventoryIds = selectedInventoryIds
+                generatedId = "ai-${index + 1}-${UUID.randomUUID().toString().take(6)}"
             )
         }
     }
+
     // Converts one recipe DTO into a RecipeUi object.
     private fun RecipeDto.toRecipeUi(
-        generatedId: String,
-        selectedInventoryIds: Set<String>
+        generatedId: String
     ): RecipeUi {
         val available = availableIngredients.map {
             RecipeIngredientUi(
@@ -55,7 +51,7 @@ internal object RecipeUiMapper {
             imageUrl = null,
             pantryMatchText = buildPantryMatchText(availableCount, missingCount),
             tag = buildTag(availableCount, missingCount),
-            usedInventoryItemIds = selectedInventoryIds,
+            usedInventoryItemIds = emptySet(),
             ingredientsAvailable = available,
             ingredientsMissing = missing,
             steps = if (instructions.isEmpty()) listOf("No instructions provided.") else instructions,

@@ -16,9 +16,8 @@ import kotlin.math.abs
  * - Estimating expiry date when no manufacturer date is provided
  * - Determining expiry status (FRESH / WATCH / CRITICAL / EXPIRED)
  *
- * Replaces Ian's mock functions in DashboardData.kt:
- * - urgencyForDays(days: Int)
- * - estimateExpiresInDays(...)
+ * This centralizes the app's expiry calculations so dashboard and form flows
+ * use the same date parsing and status rules.
  */
 object ExpiryCalculator {
 
@@ -104,7 +103,6 @@ object ExpiryCalculator {
 
     /**
      * Determines ExpiryStatus from a raw [daysRemaining] value.
-     * Drop-in replacement for Ian's urgencyForDays() mock.
      */
     fun getExpiryStatus(daysRemaining: Int): ExpiryStatus = when {
         daysRemaining <= 0                  -> ExpiryStatus.EXPIRED
@@ -145,11 +143,11 @@ object ExpiryCalculator {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Dashboard Integration — drop-in replacements for DashboardData.kt
+    // Dashboard integration helpers
     // ─────────────────────────────────────────────────────────────
 
     /**
-     * Drop-in replacement for Ian's urgencyForDays(days: Int): String
+     * Returns a simple dashboard-friendly urgency label.
      */
     fun urgencyLabel(daysRemaining: Int): String = when (getExpiryStatus(daysRemaining)) {
         ExpiryStatus.EXPIRED  -> "Expired"
@@ -159,8 +157,6 @@ object ExpiryCalculator {
     }
 
     /**
-     * Drop-in replacement for Ian's estimateExpiresInDays(...): Int
-     *
      * BUG FIX: Now correctly parses "Apr 16, 2026" (the format the UI uses).
      * The old code was missing "MMM d, yyyy" causing it to fall back to 14 days
      * instead of computing the real date difference.

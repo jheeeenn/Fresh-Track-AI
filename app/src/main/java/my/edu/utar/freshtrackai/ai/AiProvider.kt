@@ -10,6 +10,8 @@ import my.edu.utar.freshtrackai.BuildConfig
 object AiProvider {
     // Lazily creates the cloud extractor only when first needed.
     val cloudFoodExtractor: CloudFoodExtractor by lazy {
-        GeminiCloudFoodExtractor(BuildConfig.GEMINI_API_KEY)
+        GeminiCloudFoodExtractor(
+            resolveGeminiApiKey(BuildConfig.GEMINI_API_KEY, BuildConfig.API_KEY)
+        )
     }
 }

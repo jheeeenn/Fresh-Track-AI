@@ -58,12 +58,14 @@ internal fun ShoppingListScreen(
     onItemCheckedChange: (String, Boolean) -> Unit,
     onAddGeneralItem: (String) -> Unit,
     onClearPurchased: () -> Int,
-    onTabSelected: (RootTab) -> Unit
+    onTabSelected: (RootTab) -> Unit,
+    showGuide: Boolean,
+    onDismissGuide: () -> Unit
 ) {
     var quickAddText by rememberSaveable { mutableStateOf("") }
     var showClearConfirm by rememberSaveable { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
-    val remainingCount = items.count { !it.checked }
+    val remainingCount = items.filter { !it.checked }.sumOf { it.quantityCount }
     val recipeItems = items.filter { it.sourceRecipeName != null }
     val generalItems = items.filter { it.sourceRecipeName == null }
 
@@ -186,11 +188,14 @@ internal fun ShoppingListScreen(
                 }
             }
 
-            item {
-                SmartTipCard(
-                    title = "SMART PLANNING",
-                    message = "Based on your recent scans, your milk is likely to expire in 2 days. Added to list automatically."
-                )
+            if (showGuide) {
+                item {
+                    SmartTipCard(
+                        title = "LIST GUIDE",
+                        message = "Recipe ingredients appear at the top. Check items as you buy them, then clear purchased entries when you are done.",
+                        onDismiss = onDismissGuide
+                    )
+                }
             }
         }
     }
@@ -246,6 +251,13 @@ private fun ShoppingListRow(
                 fontSize = 16.sp,
                 textDecoration = titleDecoration
             )
+            if (item.quantityCount > 1) {
+                Text(
+                    text = "Qty x${item.quantityCount}",
+                    color = Slate600,
+                    fontSize = 12.sp
+                )
+            }
             if (item.sourceRecipeName != null) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("RECIPE:", color = Slate600, fontSize = 12.sp, letterSpacing = 1.sp)

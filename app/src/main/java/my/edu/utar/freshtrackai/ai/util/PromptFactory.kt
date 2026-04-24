@@ -18,12 +18,13 @@ internal object PromptFactory {
 - Do not include explanations or extra keys
 """
 
-    // Prompt used for Gemini recipe generation.
-    fun recipePrompt(inventorySummary: String): String = """
+    // Prompt used for recipe generation from the current inventory.
+    fun recipePrompt(inventorySummary: String): String {
+        return """
 You are a recipe assistant.
 
 Task:
-- Propose exactly 2 practical recipes using the provided inventory.
+- Propose up to 10 distinct recipes using the provided inventory.
 - Prefer recipes that consume soon-to-expire ingredients first.
 - Keep recipes simple for home cooking.
 
@@ -57,7 +58,65 @@ Rules:
 - availableIngredients can only include items from inventory.
 - missingIngredients must include only items not present in inventory.
 - instructions must be concise and actionable.
+- If no practical recipe can be formed, return {"recipes": []}.
 """.trimIndent()
+    }
+
+    fun nutritionLabelPrompt(): String = """
+You are a nutrition label reader.
+
+Task:
+- Read the nutrition facts shown in the image.
+- Return only the key nutrition values that are clearly visible.
+
+Output format:
+- Plain text only
+- One value per line
+- Keep it short and human readable
+
+Example:
+120 kcal / serving
+Protein: 5g
+Fat: 4g
+Carbs: 18g
+Sugar: 6g
+Sodium: 210mg
+
+Rules:
+- Include serving size if it is clearly shown
+- Do not include brand, barcode, marketing claims, or price
+- If the label is unreadable or not a nutrition label, reply exactly: UNREADABLE
+- Do not use markdown fences or extra explanation
+""".trimIndent()
+
+    fun nutritionEstimatePrompt(itemName: String, categoryName: String = ""): String {
+        val categoryHint = if (categoryName.isBlank()) "" else " (category: $categoryName)"
+        return """
+You are a nutrition estimation assistant.
+
+Task:
+- Provide a typical nutrition estimate for "$itemName"$categoryHint.
+
+Output format:
+- Plain text only
+- One value per line
+- Keep it short and human readable
+
+Example:
+61 kcal / 100ml
+Protein: 3.2g
+Fat: 3.3g
+Carbs: 4.8g
+Sugar: 4.8g
+Calcium: 120mg
+
+Rules:
+- Use per 100g or per 100ml as the base unit
+- Include the 4-5 most relevant nutrients
+- Use typical values for a standard version of the food
+- Do not use markdown fences or extra explanation
+""".trimIndent()
+    }
 
     // Prompt used for food image analysis with Gemma.
     fun foodImageOcrPrompt(): String = """

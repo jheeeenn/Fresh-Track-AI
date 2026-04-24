@@ -196,7 +196,6 @@ object ShelfLifeRules {
         if (localResult != FoodCategory.OTHER) {
             return localResult
         }
-        // Assuming your AiCategorizer still has categorize() for fallback/other uses
         return AiCategorizer.categorize(itemName)
     }
 
@@ -242,4 +241,3 @@ object ShelfLifeRules {
         return fallback
     }
 }
-//hi

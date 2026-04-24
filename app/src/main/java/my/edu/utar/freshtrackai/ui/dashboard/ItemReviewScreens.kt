@@ -224,23 +224,19 @@ internal fun AddMissingItemScreen(
                         )
 
                         // Quantity + Category row
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            OutlinedTextField(
-                                value = draft.quantity,
-                                onValueChange = { onDraftChange(draft.copy(quantity = it)) },
-                                modifier = Modifier.weight(1f),
-                                label = { Text("Quantity") },
-                                placeholder = { Text("e.g. 1 box") },
-                                colors = freshOutlinedTextFieldColors(),
-                                singleLine = true
-                            )
+                        OutlinedTextField(
+                            value = draft.quantity,
+                            onValueChange = { onDraftChange(draft.copy(quantity = it)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Quantity") },
+                            placeholder = { Text("e.g. 1 bottle or 2 units") },
+                            colors = freshOutlinedTextFieldColors(),
+                            singleLine = true
+                        )
 
-                            Box(modifier = Modifier.weight(1f)) {
+                        Box(modifier = Modifier.fillMaxWidth()) {
                                 OutlinedTextField(
-                                    value = "${categoryEmoji(draft.category)} ${draft.category.label}",
+                                    value = "${categoryEmojiFor(draft.category)} ${draft.category.label}",
                                     onValueChange = {},
                                     modifier = Modifier.fillMaxWidth(),
                                     label = { Text("Category") },
@@ -270,7 +266,7 @@ internal fun AddMissingItemScreen(
                                     InventoryCategory.entries.forEach { category ->
                                         DropdownMenuItem(
                                             text = {
-                                                Text("${categoryEmoji(category)} ${category.label}")
+                                                Text("${categoryEmojiFor(category)} ${category.label}")
                                             },
                                             onClick = {
                                                 onDraftChange(draft.copy(category = category))
@@ -280,7 +276,6 @@ internal fun AddMissingItemScreen(
                                     }
                                 }
                             }
-                        }
 
                         // Expiry date picker button
                         OutlinedButton(
@@ -460,23 +455,28 @@ private fun ReviewScannedItemCard(item: ReviewItemUi, onEdit: () -> Unit, onDele
                         overflow = TextOverflow.Ellipsis
                     )
                     Spacer(Modifier.height(4.dp))
-                    Row(
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Badge(
-                            label = item.category.label.uppercase(),
-                            textColor = Slate600,
-                            bg = Gray100
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Start,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Badge(
+                                label = item.category.label.uppercase(),
+                                textColor = Slate600,
+                                bg = Gray100
+                            )
+                        }
                         Text(
                             "Qty: ${item.quantityLabel}",
                             color = Slate600,
-                            fontSize = 15.sp,
-                            maxLines = 1,
+                            fontSize = 14.sp,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
@@ -560,7 +560,7 @@ private fun ReviewThumb(item: ReviewItemUi) {
             .background(bg),
         contentAlignment = Alignment.Center
     ) {
-        Text(categoryEmoji(item.category), fontSize = 24.sp)
+        Text(categoryEmojiFor(item.category), fontSize = 24.sp)
     }
 }
 

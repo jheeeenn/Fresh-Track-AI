@@ -40,7 +40,9 @@ internal data class InventoryItem(
     val expiresInDays: Int,
     val thumbnailRef: String,
     val nutritionNotes: String = "",
-    val formattedExpiryDate: String = ""
+    val formattedExpiryDate: String = "",
+    val formattedAddedDate: String = "",
+    val purchaseDateMillis: Long = 0L
 )
 
 internal data class ExpiringItem(
@@ -99,18 +101,12 @@ internal data class RecipeUi(
     val avoidanceTokens: Set<String>
 )
 
-internal data class RecipePreferencesUi(
-    val selectedInventoryItemIds: Set<String> = emptySet(),
-    val inventoryOnly: Boolean = false,
-    val avoidancePresetSet: Set<String> = emptySet(),
-    val avoidanceCustomText: String = ""
-)
-
 internal data class ShoppingListItemUi(
     val id: String,
     val name: String,
     val sourceRecipeId: String? = null,
     val sourceRecipeName: String? = null,
+    val quantityCount: Int = 1,
     val checked: Boolean = false
 )
 

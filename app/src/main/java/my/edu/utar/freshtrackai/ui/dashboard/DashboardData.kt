@@ -154,9 +154,8 @@ internal fun my.edu.utar.freshtrackai.data.local.entity.InventoryItem.toUiModel(
     
     val addedDiff = currentMillis - this.purchaseDate
     val addedDays = (addedDiff / (1000 * 60 * 60 * 24)).toInt().coerceAtLeast(0)
-
-    val sdf = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
-    val formattedDate = sdf.format(java.util.Date(this.expiryDate))
+    val formattedExpiryDate = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
+        .format(java.util.Date(this.expiryDate))
 
     val cat = InventoryCategory.values().firstOrNull { it.name.equals(this.category, ignoreCase = true) } ?: InventoryCategory.Other
     
@@ -164,12 +163,14 @@ internal fun my.edu.utar.freshtrackai.data.local.entity.InventoryItem.toUiModel(
         id = this.itemId.toString(),
         name = this.name,
         category = cat,
-        quantityLabel = if (this.quantity % 1.0 == 0.0) "${this.quantity.toInt()} ${this.unit}" else "${this.quantity} ${this.unit}",
+        quantityLabel = formatStoredQuantityLabel(this.quantity, this.unit),
         addedDaysAgo = addedDays,
         expiresInDays = days,
         thumbnailRef = this.name.lowercase().replace(" ", "_"),
         nutritionNotes = this.notes,
-        formattedExpiryDate = formattedDate
+        formattedExpiryDate = formattedExpiryDate,
+        formattedAddedDate = formatAddedDateLabel(this.purchaseDate),
+        purchaseDateMillis = this.purchaseDate
     )
 }
 
@@ -295,53 +296,6 @@ internal fun reviewThumbBackground(ref: String): Color {
     val idx = (ref.hashCode() and Int.MAX_VALUE) % colors.size
     return colors[idx]
 }
-
-internal fun generateRecipesForPreferences(
-    recipesAll: List<RecipeUi>,
-    inventory: List<InventoryItem>,
-    preferences: RecipePreferencesUi,
-    refreshTick: Int
-): List<RecipeUi> {
-    val availableInventoryIds = inventory.map { it.id }.toSet()
-    val selected = if (preferences.selectedInventoryItemIds.isEmpty()) {
-        availableInventoryIds
-    } else {
-        preferences.selectedInventoryItemIds.intersect(availableInventoryIds)
-    }
-    val selectedIds = if (selected.isEmpty()) availableInventoryIds else selected
-    val avoidTokens = parseAvoidanceTokens(preferences.avoidanceCustomText) +
-            preferences.avoidancePresetSet.map { it.lowercase() }.toSet()
-
-    val filtered = recipesAll.filter { recipe ->
-        val avoidsAllowed = avoidTokens.none { token -> recipe.avoidanceTokens.contains(token) }
-        val inventoryOnlyAllowed = !preferences.inventoryOnly || recipe.ingredientsMissing.isEmpty()
-        avoidsAllowed && inventoryOnlyAllowed
-    }
-
-    val ranked = filtered.sortedWith(
-        compareByDescending<RecipeUi> { recipeScore(recipe = it, selectedInventoryIds = selectedIds) }
-            .thenBy { it.ingredientsMissing.size }
-            .thenBy { it.prepMinutes }
-            .thenBy { it.title }
-    )
-
-    if (ranked.isEmpty()) return recipesAll
-    val rotateBy = if (ranked.isEmpty()) 0 else refreshTick % ranked.size
-    return ranked.drop(rotateBy) + ranked.take(rotateBy)
-}
-
-internal fun recipeScore(recipe: RecipeUi, selectedInventoryIds: Set<String>): Int {
-    val matched = recipe.usedInventoryItemIds.count { it in selectedInventoryIds }
-    val zeroMissingBonus = if (recipe.ingredientsMissing.isEmpty()) 2 else 0
-    return matched * 3 + zeroMissingBonus
-}
-
-internal fun parseAvoidanceTokens(input: String): Set<String> = input
-    .lowercase()
-    .split(",", ";", "\n")
-    .map { it.trim() }
-    .filter { it.isNotEmpty() }
-    .toSet()
 
 internal fun addMissingItemsToShoppingList(
     shoppingListItems: MutableList<ShoppingListItemUi>,

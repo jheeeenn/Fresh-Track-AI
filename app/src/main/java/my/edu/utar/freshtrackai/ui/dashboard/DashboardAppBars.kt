@@ -1,71 +1,113 @@
-﻿package my.edu.utar.freshtrackai.ui.dashboard
+package my.edu.utar.freshtrackai.ui.dashboard
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.Memory
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import my.edu.utar.freshtrackai.R
+import my.edu.utar.freshtrackai.ai.GemmaModelStatus
+import my.edu.utar.freshtrackai.ai.GemmaModelStore
+import my.edu.utar.freshtrackai.logic.NotificationHelper
 
 @Composable
 internal fun DashboardTopBar(
     showBack: Boolean = false,
     onBack: (() -> Unit)? = null
 ) {
+    val context = LocalContext.current
+    val controller = LocalDashboardTopBarController.current
+    val coroutineScope = rememberCoroutineScope()
     var showSettingsSheet by rememberSaveable { mutableStateOf(false) }
-    var gemmaConnected by rememberSaveable { mutableStateOf(true) }
-    var notificationsEnabled by rememberSaveable { mutableStateOf(true) }
-    var unitsMetric by rememberSaveable { mutableStateOf(true) }
-    var avoidSpicy by rememberSaveable { mutableStateOf(false) }
-    var avoidOnion by rememberSaveable { mutableStateOf(false) }
-    var avoidCoriander by rememberSaveable { mutableStateOf(false) }
+    var gemmaStatus by rememberSaveable { mutableStateOf(GemmaModelStore.getModelStatus(context).name) }
+
+    val gemmaModelLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) {
+            return@rememberLauncherForActivityResult
+        }
+
+        coroutineScope.launch {
+            controller?.setAiTask(
+                DashboardAiTaskState(
+                    title = "Preparing Gemma 4 Model…",
+                    detail = "Please stay on this page while the model file is copied."
+                )
+            )
+
+            val result = withContext(Dispatchers.IO) {
+                GemmaModelStore.importModelFromUri(context, uri)
+            }
+
+            controller?.setAiTask(null)
+            gemmaStatus = GemmaModelStore.getModelStatus(context).name
+
+            result.exceptionOrNull()?.let {
+                Toast.makeText(
+                    context,
+                    it.message ?: "Failed to import Gemma model.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    LaunchedEffect(showSettingsSheet) {
+        if (showSettingsSheet) {
+            gemmaStatus = GemmaModelStore.getModelStatus(context).name
+        }
+    }
 
     Column {
         Row(
@@ -94,28 +136,23 @@ internal fun DashboardTopBar(
             Spacer(Modifier.width(6.dp))
             Text("Fresh Track AI", color = Slate900, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.weight(1f))
-            IconButton(onClick = { showSettingsSheet = true }) {
-                Icon(Icons.Outlined.AccountCircle, contentDescription = "Profile and settings", tint = Slate900)
+            if (controller != null) {
+                IconButton(onClick = { showSettingsSheet = true }) {
+                    Icon(Icons.Outlined.AccountCircle, contentDescription = "Profile and settings", tint = Slate900)
+                }
             }
         }
         HorizontalDivider(color = Gray200)
     }
 
-    if (showSettingsSheet) {
+    if (showSettingsSheet && controller != null) {
         ProfileQuickSettingsSheet(
-            gemmaConnected = gemmaConnected,
-            notificationsEnabled = notificationsEnabled,
-            unitsMetric = unitsMetric,
-            avoidSpicy = avoidSpicy,
-            avoidOnion = avoidOnion,
-            avoidCoriander = avoidCoriander,
+            gemmaStatus = GemmaModelStatus.valueOf(gemmaStatus),
+            notificationsGranted = NotificationHelper.hasNotificationPermission(context),
             onDismiss = { showSettingsSheet = false },
-            onGemmaConnectedChange = { gemmaConnected = it },
-            onNotificationsChange = { notificationsEnabled = it },
-            onUnitsMetricChange = { unitsMetric = it },
-            onAvoidSpicyChange = { avoidSpicy = it },
-            onAvoidOnionChange = { avoidOnion = it },
-            onAvoidCorianderChange = { avoidCoriander = it }
+            onChooseGemmaModel = { gemmaModelLauncher.launch(arrayOf("*/*")) },
+            onOpenNotificationSettings = { NotificationHelper.openNotificationSettings(context) },
+            onSendTestNotification = { NotificationHelper.sendTestNotification(context) }
         )
     }
 }
@@ -141,20 +178,24 @@ internal fun BottomNav(active: RootTab, onTabSelected: (RootTab) -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProfileQuickSettingsSheet(
-    gemmaConnected: Boolean,
-    notificationsEnabled: Boolean,
-    unitsMetric: Boolean,
-    avoidSpicy: Boolean,
-    avoidOnion: Boolean,
-    avoidCoriander: Boolean,
+    gemmaStatus: GemmaModelStatus,
+    notificationsGranted: Boolean,
     onDismiss: () -> Unit,
-    onGemmaConnectedChange: (Boolean) -> Unit,
-    onNotificationsChange: (Boolean) -> Unit,
-    onUnitsMetricChange: (Boolean) -> Unit,
-    onAvoidSpicyChange: (Boolean) -> Unit,
-    onAvoidOnionChange: (Boolean) -> Unit,
-    onAvoidCorianderChange: (Boolean) -> Unit
+    onChooseGemmaModel: () -> Unit,
+    onOpenNotificationSettings: () -> Unit,
+    onSendTestNotification: () -> Unit
 ) {
+    val gemmaStatusLabel = when (gemmaStatus) {
+        GemmaModelStatus.Configured -> "Configured"
+        GemmaModelStatus.MissingFile -> "Missing file"
+        GemmaModelStatus.NotSet -> "Not set"
+    }
+    val gemmaStatusColor = when (gemmaStatus) {
+        GemmaModelStatus.Configured -> Emerald
+        GemmaModelStatus.MissingFile -> RoseRed
+        GemmaModelStatus.NotSet -> Slate600
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = White
@@ -169,7 +210,7 @@ private fun ProfileQuickSettingsSheet(
         ) {
             Text("Profile & Quick Settings", color = Slate900, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp)
             Text(
-                "Session-level frontend settings for Fresh Track.",
+                "Real device and app status controls for Fresh Track.",
                 color = Slate600
             )
 
@@ -196,53 +237,24 @@ private fun ProfileQuickSettingsSheet(
                             Icon(
                                 Icons.Outlined.Circle,
                                 contentDescription = null,
-                                tint = if (gemmaConnected) Emerald else RoseRed,
+                                tint = gemmaStatusColor,
                                 modifier = Modifier.size(10.dp)
                             )
                             Text(
-                                if (gemmaConnected) "Connected" else "Offline",
-                                color = if (gemmaConnected) Emerald else RoseRed,
+                                gemmaStatusLabel,
+                                color = gemmaStatusColor,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     }
                     Button(
-                        onClick = { onGemmaConnectedChange(!gemmaConnected) },
+                        onClick = onChooseGemmaModel,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = Emerald, contentColor = White),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text(if (gemmaConnected) "Set Offline (Mock)" else "Reconnect (Mock)")
-                    }
-                }
-            }
-
-            Card(
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = Gray100)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text("Dietary Defaults", color = Slate900, fontWeight = FontWeight.SemiBold)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = avoidSpicy,
-                            onClick = { onAvoidSpicyChange(!avoidSpicy) },
-                            label = { Text("Spicy") }
-                        )
-                        FilterChip(
-                            selected = avoidOnion,
-                            onClick = { onAvoidOnionChange(!avoidOnion) },
-                            label = { Text("Onion") }
-                        )
-                        FilterChip(
-                            selected = avoidCoriander,
-                            onClick = { onAvoidCorianderChange(!avoidCoriander) },
-                            label = { Text("Coriander") }
+                        Text(
+                            if (gemmaStatus == GemmaModelStatus.NotSet) "Choose Model" else "Change Model"
                         )
                     }
                 }
@@ -258,58 +270,31 @@ private fun ProfileQuickSettingsSheet(
                         .padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Notifications", color = Slate900, fontWeight = FontWeight.SemiBold)
-                        Switch(
-                            checked = notificationsEnabled,
-                            onCheckedChange = onNotificationsChange
-                        )
-                    }
-
-                    Text("Units", color = Slate900, fontWeight = FontWeight.SemiBold)
+                    Text("Notifications", color = Slate900, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        if (notificationsGranted) "Permission granted" else "Permission required",
+                        color = Slate600
+                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = { onUnitsMetricChange(true) },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (unitsMetric) Emerald else White,
-                                contentColor = if (unitsMetric) White else Slate900
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Metric")
-                        }
                         OutlinedButton(
-                            onClick = { onUnitsMetricChange(false) },
+                            onClick = onOpenNotificationSettings,
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Imperial", color = Slate900)
+                            Text("Open Settings", color = Slate900)
+                        }
+                        Button(
+                            onClick = onSendTestNotification,
+                            enabled = notificationsGranted,
+                            colors = ButtonDefaults.buttonColors(containerColor = Emerald, contentColor = White),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Send Test")
                         }
                     }
-                }
-            }
-
-            Card(
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = Gray100)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text("Account", color = Slate900, fontWeight = FontWeight.SemiBold)
-                    Text("Ian Ho (Mock)", color = Slate900, fontWeight = FontWeight.Bold)
-                    Text("Plan: Gemma 4 Integrated", color = Slate600)
                 }
             }
         }
     }
 }
-

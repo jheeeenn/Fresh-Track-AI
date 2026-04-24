@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <inset xmlns:android="http://schemas.android.com/apk/res/android"
-    android:insetLeft="30dp"
-    android:insetTop="30dp"
-    android:insetRight="30dp"
-    android:insetBottom="30dp"
+    android:insetLeft="40dp"
+    android:insetTop="40dp"
+    android:insetRight="40dp"
+    android:insetBottom="40dp"
     android:drawable="@drawable/ic_freshtrack_logo_focus" />

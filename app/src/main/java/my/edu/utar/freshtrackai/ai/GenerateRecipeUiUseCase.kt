@@ -1,8 +1,8 @@
 package my.edu.utar.freshtrackai.ai
 
 import my.edu.utar.freshtrackai.ai.util.InventorySummaryBuilder
+import my.edu.utar.freshtrackai.ai.util.PromptFactory
 import my.edu.utar.freshtrackai.ui.dashboard.InventoryItem
-import my.edu.utar.freshtrackai.ui.dashboard.RecipePreferencesUi
 import my.edu.utar.freshtrackai.ui.dashboard.RecipeUi
 
 /**
@@ -14,25 +14,18 @@ internal class GenerateRecipeUiUseCase(
     private val extractor: CloudFoodExtractor = AiProvider.cloudFoodExtractor
 ) {
 
-    // Generates recipe UI models from the current inventory and user preferences.
+    // Generates recipe UI models from the current inventory.
     suspend fun generateFromInventory(
         inventory: List<InventoryItem>,
-        preferences: RecipePreferencesUi,
         onStatus: ((String) -> Unit)? = null
     ): List<RecipeUi> {
-        val mappedInput = InventoryRecipeInputMapper.map(
-            inventory = inventory,
-            preferences = preferences
-        )
-
-        val summary = InventorySummaryBuilder.fromNames(mappedInput.itemNames)
-        val result = extractor.suggestRecipes(summary, onStatus)
+        val mappedInput = InventoryRecipeInputMapper.map(inventory)
+        val summary = InventorySummaryBuilder.fromNames(mappedInput.allItemNames)
+        val prompt = PromptFactory.recipePrompt(inventorySummary = summary)
+        val result = extractor.suggestRecipes(prompt, onStatus)
 
         return RecipeUiMapper.mapRecipes(
-            recipes = result.recipes,
-            selectedInventoryIds = mappedInput.selectedInventoryIds
+            recipes = result.recipes
         )
     }
-
-
 }

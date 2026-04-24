@@ -7,7 +7,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import my.edu.utar.freshtrackai.ui.dashboard.InventoryItem
-import my.edu.utar.freshtrackai.ui.dashboard.RecipePreferencesUi
 import my.edu.utar.freshtrackai.ui.dashboard.RecipeUi
 
 /**
@@ -15,7 +14,17 @@ import my.edu.utar.freshtrackai.ui.dashboard.RecipeUi
  * It handles loading, progress updates, results, and error messages.
  */
 internal class RecipeGenerationViewModel(
-    private val useCase: GenerateRecipeUiUseCase = GenerateRecipeUiUseCase()
+    private val useCase: GenerateRecipeUiUseCase = GenerateRecipeUiUseCase(),
+    private val initialRecipes: List<RecipeUi> = cachedRecipes,
+    private val recipeGenerator: suspend (
+        inventory: List<InventoryItem>,
+        onStatus: ((String) -> Unit)?
+    ) -> List<RecipeUi> = { inventory, onStatus ->
+        useCase.generateFromInventory(
+            inventory = inventory,
+            onStatus = onStatus
+        )
+    }
 ) : ViewModel() {
 
     companion object {
@@ -24,18 +33,16 @@ internal class RecipeGenerationViewModel(
     }
 
     private val _uiState = MutableStateFlow(
-        RecipeGenerationUiState(recipes = cachedRecipes)
+        RecipeGenerationUiState(recipes = initialRecipes)
     )
     val uiState: StateFlow<RecipeGenerationUiState> = _uiState.asStateFlow()
 
-    // Starts recipe generation using the current inventory and preferences.
-    fun generateRecipes(
-        inventory: List<InventoryItem>,
-        preferences: RecipePreferencesUi
-    ) {
+    // Starts recipe generation using the current inventory.
+    fun generateRecipes(inventory: List<InventoryItem>) {
         if (inventory.isEmpty()) {
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
+                recipes = _uiState.value.recipes,
                 errorMessage = "No inventory items available.",
                 processingMessage = null
             )
@@ -50,10 +57,9 @@ internal class RecipeGenerationViewModel(
             )
 
             try {
-                val recipes = useCase.generateFromInventory(
-                    inventory = inventory,
-                    preferences = preferences,
-                    onStatus = { status ->
+                val recipes = recipeGenerator(
+                    inventory,
+                    { status ->
                         _uiState.value = _uiState.value.copy(processingMessage = status)
                     }
                 )
@@ -68,16 +74,21 @@ internal class RecipeGenerationViewModel(
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
+                    recipes = _uiState.value.recipes,
                     errorMessage = e.message ?: "Failed to generate recipes.",
                     processingMessage = null
                 )
             }
         }
-
     }
 
     // Clears the current error message after it has been shown to the user.
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+
+    internal fun seedRecipesForTest(recipes: List<RecipeUi>) {
+        cachedRecipes = recipes
+        _uiState.value = _uiState.value.copy(recipes = recipes)
     }
 }

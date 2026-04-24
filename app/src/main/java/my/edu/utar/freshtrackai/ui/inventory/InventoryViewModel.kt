@@ -109,7 +109,11 @@ class InventoryViewModel(
 
     fun addShoppingItem(name: String, sourceRecipeId: String? = null, sourceRecipeName: String? = null) {
         viewModelScope.launch {
-            repository.insertShoppingItem(ShoppingItemEntity(name = name, sourceRecipeId = sourceRecipeId, sourceRecipeName = sourceRecipeName))
+            repository.addOrMergeShoppingItem(
+                name = name,
+                sourceRecipeId = sourceRecipeId,
+                sourceRecipeName = sourceRecipeName
+            )
         }
     }
     

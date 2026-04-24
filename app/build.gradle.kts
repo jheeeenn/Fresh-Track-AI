@@ -4,8 +4,9 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.devtools.ksp")
+    alias(libs.plugins.ksp)
 }
+
 val localProperties = Properties().apply {
     val localPropertiesFile = rootProject.file("local.properties")
     if (localPropertiesFile.exists()) {
@@ -13,12 +14,9 @@ val localProperties = Properties().apply {
     }
 }
 
-val geminiApiKey = localProperties.getProperty("GEMINI_API_KEY", "")
-    .ifEmpty { localProperties.getProperty("API_KEY", "") }
-
 android {
     namespace = "my.edu.utar.freshtrackai"
-    compileSdk = 36 // FIXED SYNTAX HERE
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "my.edu.utar.freshtrackai"
@@ -46,8 +44,6 @@ android {
         }
     }
     compileOptions {
-        // ADDED TO SUPPORT java.time ON API 24
-        //coreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -62,11 +58,12 @@ android {
 }
 
 dependencies {
-    // ADDED DESUGARING DEPENDENCY FOR java.time
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
@@ -76,22 +73,16 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.coil.compose)
 
-    // WorkManager & Notifications
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
-    implementation("androidx.core:core-ktx:1.13.1")
+    implementation(libs.androidx.work.runtime.ktx)
 
-    // Google AI (For Gemini integration)
-    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+    implementation(libs.google.gemini)
 
-    // Room Database
-    val room_version = "2.8.4"
-    implementation("androidx.room:room-runtime:${room_version}")
-    implementation("androidx.room:room-ktx:${room_version}")
-    ksp("androidx.room:room-compiler:$room_version")
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 
-    // Testing
     testImplementation(libs.junit)
-    testImplementation("junit:junit:4.13.2")
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
@@ -99,10 +90,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
-    implementation("com.google.code.gson:gson:2.13.2")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-
-    implementation("com.google.ai.edge.litertlm:litertlm-android:0.10.0")
+    implementation(libs.google.gson)
+    implementation(libs.squareup.okhttp)
+    implementation(libs.google.litertlm.android)
 }

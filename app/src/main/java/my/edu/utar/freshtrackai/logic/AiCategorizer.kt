@@ -5,16 +5,21 @@ import com.google.ai.client.generativeai.GenerativeModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import my.edu.utar.freshtrackai.BuildConfig
+import my.edu.utar.freshtrackai.ai.resolveGeminiApiKey
 
 object AiCategorizer {
 
-    private val API_KEY = BuildConfig.API_KEY
+    internal fun resolveApiKey(primaryKey: String, fallbackKey: String): String {
+        return resolveGeminiApiKey(primaryKey, fallbackKey)
+    }
+
+    private val apiKey = resolveApiKey(BuildConfig.GEMINI_API_KEY, BuildConfig.API_KEY)
 
     private val generativeModel by lazy {
         GenerativeModel(
             modelName = "gemini-2.5-flash",
-            apiKey = API_KEY
-    )
+            apiKey = apiKey
+        )
     }
 
     // ─────────────────────────────────────────────────────────────

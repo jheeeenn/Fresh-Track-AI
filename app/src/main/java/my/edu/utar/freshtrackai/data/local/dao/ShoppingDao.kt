@@ -23,6 +23,9 @@ interface ShoppingDao {
     @Query("SELECT * FROM shopping_items")
     fun getAllShoppingItems(): Flow<List<ShoppingItemEntity>>
 
+    @Query("SELECT * FROM shopping_items WHERE normalizedName = :normalizedName LIMIT 1")
+    suspend fun getItemByNormalizedName(normalizedName: String): ShoppingItemEntity?
+
     @Query("DELETE FROM shopping_items WHERE checked = 1")
     suspend fun clearPurchasedItems()
 }

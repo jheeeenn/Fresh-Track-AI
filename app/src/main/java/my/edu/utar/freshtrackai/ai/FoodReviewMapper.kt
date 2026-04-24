@@ -4,6 +4,7 @@ import java.util.UUID
 import my.edu.utar.freshtrackai.ai.model.FoodDetectionResult
 import my.edu.utar.freshtrackai.ui.dashboard.InventoryCategory
 import my.edu.utar.freshtrackai.ui.dashboard.ReviewItemUi
+import my.edu.utar.freshtrackai.ui.dashboard.normalizeScannedQuantityLabel
 
 /**
  * Converts food detection results into review screen items.
@@ -30,7 +31,7 @@ internal object FoodReviewMapper {
                 quantityLabel = quantityLabel,
                 expiresLabel = "Estimated ${expiryDays}d",
                 expiresInDays = expiryDays,
-                nutritionLabel = "AI food scan",
+                nutritionLabel = "Not available",
                 thumbnailRef = item.name.ifBlank { "item" }.lowercase().replace(" ", "_")
             )
         }
@@ -38,18 +39,7 @@ internal object FoodReviewMapper {
 
     // Builds a readable quantity label from AI output.
     private fun resolveQuantityLabel(raw: String?, value: Double?, unit: String?): String {
-        val parsedRaw = raw?.trim().orEmpty()
-        val parsedUnit = unit?.trim().orEmpty()
-        val parsedValue = value?.let {
-            if (it % 1.0 == 0.0) it.toInt().toString() else it.toString()
-        }.orEmpty()
-
-        return when {
-            parsedRaw.isNotBlank() -> parsedRaw
-            parsedValue.isNotBlank() && parsedUnit.isNotBlank() -> "$parsedValue $parsedUnit"
-            parsedValue.isNotBlank() -> parsedValue
-            else -> "Detected item"
-        }
+        return normalizeScannedQuantityLabel(raw, value, unit)
     }
 
     // Converts AI category text into the app's inventory category.

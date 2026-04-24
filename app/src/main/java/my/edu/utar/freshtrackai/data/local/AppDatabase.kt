@@ -9,7 +9,7 @@ import my.edu.utar.freshtrackai.data.local.dao.ShoppingDao
 import my.edu.utar.freshtrackai.data.local.entity.InventoryItem
 import my.edu.utar.freshtrackai.data.local.entity.ShoppingItemEntity
 
-@Database(entities = [InventoryItem::class, ShoppingItemEntity::class], version = 2, exportSchema = false)
+@Database(entities = [InventoryItem::class, ShoppingItemEntity::class], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun inventoryDao(): InventoryDao
