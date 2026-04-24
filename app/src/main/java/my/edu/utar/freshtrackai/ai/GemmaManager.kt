@@ -48,17 +48,15 @@ internal class GemmaManager(private val context: Context) {
                     return@withContext Result.success(Unit)
                 }
 
-                val modelPath = GemmaModelStore.ensureBundledModelReady(context)
-                    .getOrElse { error ->
-                        return@withContext Result.failure(
-                            IllegalStateException("Bundled Gemma model is not available.", error)
-                        )
-                    }
+                val modelPath = GemmaModelStore.getModelPath(context)
+                    ?: return@withContext Result.failure(
+                        IllegalStateException("No Gemma model selected yet.")
+                    )
 
                 val modelFile = File(modelPath)
                 if (!modelFile.exists()) {
                     return@withContext Result.failure(
-                        IllegalStateException("Bundled Gemma model file could not be found.")
+                        IllegalStateException("Selected Gemma model file no longer exists.")
                     )
                 }
 

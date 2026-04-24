@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import my.edu.utar.freshtrackai.ai.AppContextProvider
-
+import my.edu.utar.freshtrackai.ai.GemmaModelStatus
 import my.edu.utar.freshtrackai.ai.GemmaModelStore
 import my.edu.utar.freshtrackai.logic.ExpiryCheckWorker
 import my.edu.utar.freshtrackai.logic.NotificationHelper
@@ -49,18 +49,43 @@ class MainActivity : ComponentActivity() {
             Log.d("NOTIF_PERMISSION", "Notification permission granted = $granted")
         }
 
-        val bundledModelResult = GemmaModelStore.ensureBundledModelReady(this)
-        bundledModelResult
-            .onSuccess { savedPath ->
-                Log.d("GEMMA_MODEL", "Bundled Gemma model ready at: $savedPath")
+        val pickGemmaModelLauncher = registerForActivityResult(
+            ActivityResultContracts.OpenDocument()
+        ) { uri: Uri? ->
+            if (uri == null) {
+                Log.d("GEMMA_PICKER", "No model selected")
+                return@registerForActivityResult
             }
-            .onFailure { error ->
-                Log.e("GEMMA_MODEL", "Failed to prepare bundled Gemma model", error)
+
+            try {
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+
+                val savedPath = GemmaModelStore.importModelFromUri(this, uri)
+                    .getOrElse { throw it }
+
+                Log.d("GEMMA_PICKER", "Model saved to: $savedPath")
+                maybeRequestNotificationPermission()
+            } catch (e: Exception) {
+                Log.e("GEMMA_PICKER", "Failed to save selected model", e)
             }
+        }
 
-        maybeRequestNotificationPermission()
-
-
+        val gemmaStatus = GemmaModelStore.getModelStatus(this)
+        if (shouldRequestGemmaModel(gemmaStatus)) {
+            if (gemmaStatus == GemmaModelStatus.MissingFile) {
+                Toast.makeText(
+                    this,
+                    "Selected Gemma model file is missing. Please choose it again.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            pickGemmaModelLauncher.launch(arrayOf("*/*"))
+        } else {
+            maybeRequestNotificationPermission()
+        }
 
         setContent {
             FreshTrackAITheme(darkTheme = false, dynamicColor = false) {
@@ -96,4 +121,8 @@ class MainActivity : ComponentActivity() {
     companion object {
         private const val KEY_NOTIFICATION_PERMISSION_REQUESTED = "notification_permission_requested"
     }
+}
+
+internal fun shouldRequestGemmaModel(status: GemmaModelStatus): Boolean {
+    return status != GemmaModelStatus.Configured
 }

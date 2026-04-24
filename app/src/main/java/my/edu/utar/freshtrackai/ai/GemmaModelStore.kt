@@ -1,24 +1,19 @@
 package my.edu.utar.freshtrackai.ai
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import java.io.File
 
-internal enum class GemmaModelStatus {
-    Ready,
-    Missing
-}
-
 /**
- * Manages the bundled Gemma model file used by the app.
- * The model is copied from assets into internal storage on first use.
+ * Stores the selected local Gemma model path in SharedPreferences.
+ * This allows the app to reuse the same model file across launches.
  */
 internal object GemmaModelStore {
-
     private const val PREFS = "gemma_model_store"
     private const val KEY_MODEL_PATH = "model_path"
-    private const val BUNDLED_MODEL_FILE_NAME = "gemma4.litertlm"
 
-    private fun saveModelPath(context: Context, absolutePath: String) {
+    fun saveModelPath(context: Context, absolutePath: String) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit()
             .putString(KEY_MODEL_PATH, absolutePath)
@@ -31,33 +26,42 @@ internal object GemmaModelStore {
     }
 
     fun getModelStatus(context: Context): GemmaModelStatus {
-        val path = getModelPath(context)
-        return if (path != null && File(path).exists()) {
-            GemmaModelStatus.Ready
-        } else {
-            GemmaModelStatus.Missing
+        val modelPath = getModelPath(context)
+        return when {
+            modelPath.isNullOrBlank() -> GemmaModelStatus.NotSet
+            File(modelPath).exists() -> GemmaModelStatus.Configured
+            else -> GemmaModelStatus.MissingFile
         }
     }
 
-    fun ensureBundledModelReady(context: Context): Result<String> {
+    fun importModelFromUri(context: Context, uri: Uri): Result<String> {
         return runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+
             val modelsDir = File(context.filesDir, "models")
             if (!modelsDir.exists()) {
                 modelsDir.mkdirs()
             }
 
-            val outFile = File(modelsDir, BUNDLED_MODEL_FILE_NAME)
+            val outFile = File(modelsDir, "gemma4.litertlm")
 
-            if (!outFile.exists()) {
-                context.assets.open(BUNDLED_MODEL_FILE_NAME).use { input ->
-                    outFile.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                outFile.outputStream().use { output ->
+                    input.copyTo(output)
                 }
-            }
+            } ?: error("Failed to open selected model file")
 
             saveModelPath(context, outFile.absolutePath)
             outFile.absolutePath
         }
     }
+}
+
+internal enum class GemmaModelStatus {
+    Configured,
+    MissingFile,
+    NotSet
 }
