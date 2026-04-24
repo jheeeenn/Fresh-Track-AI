@@ -1,5 +1,6 @@
-﻿# Gradle files
+# Gradle files
 .gradle/
+.gradle-local/
 build/
 
 # Local configuration file (sdk path, etc)
@@ -40,6 +41,3 @@ stitch_wise_html/
 stitch_main_dashboard_refined.html
 stitch_main_dashboard_refined.png
 
-# Local AI model files
-app/src/main/assets/*.litertlm
-app/src/main/assets/gemma4.litertlm
