@@ -25,8 +25,5 @@ Integrated AI outputs so they can be consumed by the logic and UI packages.
 Helped ensure AI components are modular and reusable within the system.
 
 
-API keys to used in the app
-AIzaSyDPpgWn1LKD8xs6OnvNCE4oaPuY76l--LI
-
 Gemma Model Download (Hugging Face)
 https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/tree/main
